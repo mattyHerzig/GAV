@@ -1,0 +1,12 @@
+{
+    "name": "your-package-name",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "pyodide1.js",
+    "scripts": {
+        "start": "node pyodide1.js"
+    },
+    "dependencies": {
+        "pyodide": "^0.26.1"
+    }
+}
