@@ -1,18 +1,29 @@
-console.log("script.js");
+console.log('script.js');
 
 // import { loadPyodide } from 'pyodide';
 // const pyodide = await loadPyodide({ indexURL : "https://cdn.jsdelivr.net/pyodide/v0.18.1/full/" });;
-const pyodide = await loadPyodide();
+
 const codePath = './sample.py';
 const traceCodePath = './tracing.py';
 
 const code = await(await fetch(codePath)).text();
-// TODO: For now, we can ignore edge cases (e.g. semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
-const pythonCode = code.replace(/"/g, '\\"'); // .replace(/\\\n/g, '');
+// TODO: For now, we can ignore edge cases (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
+const pythonCode = code; // .replace(/"/g, '\\"').replace(/\\\n/g, '');
+const pyodide = await loadPyodide();
+pyodide.globals.set('code', pythonCode);
 // const pythonCode = code.replace(/"/g, '\\"');
 const traceCode = await(await fetch(traceCodePath)).text();
-const tracingCode = `code = """${pythonCode}"""\n${traceCode}`;
+// const tracingCode = `code = """${pythonCode}"""\n${traceCode}`;
 // const tracingCode = `${traceCode}\nexec("""${pythonCode}""")`;
 
 // console.log('code:\n', tracingCode, '\noutput:');
-pyodide.runPythonAsync(tracingCode);
+const steps = pyodide.runPython(traceCode).toJs(); // change back to Async if needed
+console.log('steps:', steps);
+// console.log(111111);
+// setTimeout(() => {
+//     console.log(222222);
+//     // pyodide.runPython('print("3333333")');
+//     // pyodide.runPython('pause_event.clear()');
+// }, 1000);
+
+// console.log(pyodide.globals.get('steps').toJs());
