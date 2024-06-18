@@ -4,16 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code Editor</title>
-    <style>
-        #editor {
-            width: 800px;
-            height: 600px;
-            border: 1px solid grey;
-        }
-    </style>
+    <link rel="stylesheet" type="text/css" href="interface.css"/>
+    <script defer src="interface.js"></script>
 </head>
 <body>
-    <div id="editor"></div>
+    <nav>
+        <a href="./interface.html">Home</a>
+        <a href="./interface.html">Interface</a>
+    </nav>
+    <div id="title">
+        <h1>General Algorithm Visualizer</h1>
+    </div>
+    <div id="content">
+        <div id="visual">
+            <h2>Visual</h2>
+            <div id="visual-content">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        <div id="editor"></div>
+    </div>
+    <div id="buttons">
+        <button id="run">Run</button>
+        <button id="stop">Stop</button>
+    </div>
 
     <script src="https://unpkg.com/monaco-editor/min/vs/loader.js"></script>
     <script>
