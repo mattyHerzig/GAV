@@ -21,8 +21,8 @@
         require(['vs/editor/editor.main'], function() {
             monaco.editor.create(document.getElementById('editor'), {
                 value: [
-                    'function x() {',
-                    '\tconsole.log("Hello world!");',
+                    'def have_fun() {',
+                    '\tprint("Hello world!")',
                     '}'
                 ].join('\n'),
                 language: 'python',
