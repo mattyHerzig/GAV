@@ -26,11 +26,13 @@
     </div>
     <div id="buttons">
         <button id="run">Run</button>
-        <button id="stop">Stop</button>
+        <button id="pause">Pause</button>
+        <!-- <button id="stop">Stop</button> -->
     </div>
 
-    <script src="https://unpkg.com/monaco-editor/min/vs/loader.js"></script>
-    <script>
+    <!-- <script src="https://unpkg.com/monaco-editor/min/vs/loader.js"></script> -->
+    <!-- <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script> -->
+    <!-- <script>
         require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor/min/vs' }});
         require(['vs/editor/editor.main'], function() {
             monaco.editor.create(document.getElementById('editor'), {
@@ -46,6 +48,7 @@
                 lineNumbers: 'on',
             });
         });
-    </script>
+    </script> -->
+    <script type="module" src="./script.js"></script>
 </body>
 </html>
