@@ -103,11 +103,30 @@ function highlightLine(editor, lineno) {
     window.currentHighlightDecoration = editor.deltaDecorations([], [decoration]);
 }
 
+function formatVars(vars) {
+    let formatted = [];
+    for (let key in vars) {
+        if (vars.hasOwnProperty(key)) {
+            let value = vars[key];
+            // Format arrays differently
+            if (Array.isArray(value)) {
+                value = '[' + value.join(', ') + ']';
+            }
+            // Remove unique identifiers from keys if present (e.g., "x-2811100" becomes "x")
+            let formattedKey = key.replace(/-\d+$/, '');
+            formatted.push(`${formattedKey}: ${value}`);
+        }
+    }
+    return formatted.join('<br>');
+}
+
 let isRunning = false;
 let isPaused = false;
 let isStopped = false;
 
 const visualContent = document.getElementById('visual-content');
+visualContent.style.textAlign = 'left';
+visualContent.style.marginLeft = '10px';
 
 const runButton = document.getElementById('run');
 const pauseButton = document.getElementById('pause');
@@ -146,7 +165,7 @@ runButton.addEventListener('click', async () => {
         
             console.log(`Line ${lineno}:\n└─ Local variables:`, localVars, '\n└─ Global variables:', globalVars, '\n└─ AST Nodes Types:', nodes, '\n└─ Comments:', comments);
             highlightLine(editor, lineno);
-            visualContent.innerHTML = 'Local variables:<br>' + JSON.stringify(localVars) + '<br><br>Global variables:<br>' + JSON.stringify(globalVars);
+            visualContent.innerHTML = `Local variables:<br>${formatVars(localVars)}<br><br>Global variables:<br>${formatVars(globalVars)}`;
             await new Promise(resolve => setTimeout(resolve, 500));
         }        
         // isStopped = false;
