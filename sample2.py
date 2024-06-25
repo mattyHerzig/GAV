@@ -5,5 +5,5 @@ def containsDuplicate(nums):
             return True
     return False
 
-nums = [1, 2, 3]
-print(containsDuplicate(nums))
+nums = [3, 2, 1, 4, 5, 6, 6]
+print(containsDuplicate(nums[:]))
