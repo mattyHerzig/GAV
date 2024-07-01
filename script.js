@@ -163,7 +163,7 @@ runButton.addEventListener('click', async () => {
                 await new Promise(resolve => setTimeout(resolve, 100)); // Wait a bit before checking again
             }
         
-            console.log(`Line ${lineno}:\n└─ Local variables:`, localVars, '\n└─ Global variables:', globalVars, '\n└─ AST Nodes Types:', nodes, '\n└─ Comments:', comments);
+            console.log(`Line ${lineno}:\n└─ Local variables:`, localVars, '\n└─ Global variables:', globalVars, '\n└─ AST Node Types:', nodes, '\n└─ Comments:', comments);
             highlightLine(editor, lineno);
             visualContent.innerHTML = `Local variables:<br>${formatVars(localVars)}<br><br>Global variables:<br>${formatVars(globalVars)}`;
             await new Promise(resolve => setTimeout(resolve, 500));

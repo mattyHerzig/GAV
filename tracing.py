@@ -8,7 +8,6 @@ lines = [''] + code.split('\n') # 1-indexed
 import sys
 import ast
 import tokenize
-import builtins
 from collections import defaultdict
 
 tree = ast.parse(code)
@@ -30,8 +29,8 @@ def trace_func(frame, event, arg):
     if frame.f_lineno == 0: # TODO: also handle lines being called twice?
         return trace_func
     # if event == 'line': #  or (event == 'call' and frame.f_lineno > 0)
-    local_vars = {f'{k}-{id(v)}': v for k, v in frame.f_locals.items() if not (k.startswith('__') and k.endswith('__'))}
-    global_vars = {f'{k}-{id(v)}': v for k, v in frame.f_globals.items() if not (k.startswith('__') and k.endswith('__')) and k not in dir(builtins)}
+    local_vars = {f'{k}-{id(v)}': v for k, v in frame.f_locals.items() if k != '__builtins__'}
+    global_vars = {f'{k}-{id(v)}': v for k, v in frame.f_globals.items() if k != '__builtins__'}
     node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if lineno_to_nodes[frame.f_lineno] else ['NoNode'] # temporarily using type name for demonstration
     steps.append((frame.f_lineno, local_vars, global_vars, node_types, lineno_to_comments[frame.f_lineno]))
     # TODO: consider output of the program
