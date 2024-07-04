@@ -8,36 +8,84 @@ lines = [''] + code.split('\n') # 1-indexed
 import sys
 import ast
 import tokenize
-from collections import defaultdict
+from copy import deepcopy
 
 tree = ast.parse(code)
-lineno_to_nodes = defaultdict(list)
+lineno_to_nodes = {}
 for node in ast.walk(tree):
     if hasattr(node, 'lineno'):
+        if node.lineno not in lineno_to_nodes:
+            lineno_to_nodes[node.lineno] = []
         lineno_to_nodes[node.lineno].append(node)
 
-lineno_to_comments = defaultdict(list) # TODO: at most one comment per line
+lineno_to_comment = {}
 for lineno, line in enumerate(lines):
     tokens = list(tokenize.tokenize(iter([line.encode('utf-8')]).__next__))
     for token in tokens:
         if token.type == tokenize.COMMENT:
-            lineno_to_comments[lineno].append(token.string)
+            lineno_to_comment[lineno] = token.string
+            break
 
-steps = []
+# TODO: handle nonlocal and global variables using AST
+# var_to_depth = {} # (name, value_id) : depth # handles usage of global and nonlocal variables
+
+# TODO: Counter, defaultdict, etc.
+python_type_to_type = { # type(value).__name__ : type
+    "list": "array",
+    "tuple": "array",
+    # "range": "array",
+    "dict": "map",
+    "str": "string",
+}
+
+inferred_type = {} # (name, depth) : type # (type is heap, graph representations, etc.)
+
+call_stack = [] # depth : {name : (type, value)} # global is 0
+
+steps = [] # (lineno, call_stack, node_types)
+
+def get_type(name, value, depth):
+    return inferred_type.get((name, depth), python_type_to_type.get(type(value).__name__, type(value).__name__))
 
 def trace_func(frame, event, arg):
-    if frame.f_lineno == 0: # TODO: also handle lines being called twice?
+    # if frame.f_lineno == 0: return trace_func # TODO: also handle lines being called twice? Eg with different events  
+    if event == 'call':
+        call_stack.append({})
+    elif event == 'return': # TODO: if the return event happens before returning, need to move this to the end of this function
+        # for name, value_id in call_stack[-1].keys():
+        #     del var_to_depth[(name, value_id)]
+        call_stack.pop() 
+    depth = len(call_stack) - 1
+    if depth < 0:
         return trace_func
-    # if event == 'line': #  or (event == 'call' and frame.f_lineno > 0)
-    local_vars = {f'{k}-{id(v)}': v for k, v in frame.f_locals.items() if k != '__builtins__'}
-    global_vars = {f'{k}-{id(v)}': v for k, v in frame.f_globals.items() if k != '__builtins__'}
-    node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if lineno_to_nodes[frame.f_lineno] else ['NoNode'] # temporarily using type name for demonstration
-    steps.append((frame.f_lineno, local_vars, global_vars, node_types, lineno_to_comments[frame.f_lineno]))
-    # TODO: consider output of the program
+    global_vars = {}
+    for name, value in frame.f_globals.items():
+        if type(value).__name__ == 'function' or name == '__builtins__':
+            continue
+        # value_id = id(value)
+        global_vars[name] = (get_type(name, value, depth), value)
+        # var_to_depth[(name, value_id)] = 0 # if not (name, value_id) in var_to_depth:
+    call_stack[0].update(global_vars) # TODO: Handle variables removed from scope if it's possible
+    if depth > 0:
+        local_vars = {}
+        for name, value in frame.f_locals.items():
+            if type(value).__name__ == 'function' or name == '__builtins__':
+                continue
+            # value_id = id(value)
+            # if (name, value_id) in var_to_depth and (var_depth := var_to_depth[(name, value_id)]) < depth:
+            #     call_stack[var_depth][(name, value_id)] = (get_type(name, value, depth), value)
+            # else:
+            local_vars[name] = (get_type(name, value, depth), value)
+                # var_to_depth[(name, value_id)] = depth
+        call_stack[depth].update(local_vars)
+    node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if frame.f_lineno in lineno_to_nodes and lineno_to_nodes[frame.f_lineno] else [] # Temporarily just using type name for demonstration
+    steps.append((frame.f_lineno, deepcopy(call_stack), node_types))
+    # print('deepcopy(call_stack):', deepcopy(call_stack)) # DEBUG
     return trace_func
 
 sys.settrace(trace_func)
-exec(code, {})
+exec(code, {}) # TODO: do {}, {} if needed
 sys.settrace(None)
 
+# TODO: format steps for JavaScript e.g. can't use tuples as keys, but no longer need value_id anyways
 print("Python steps:", steps)

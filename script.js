@@ -103,20 +103,44 @@ function highlightLine(editor, lineno) {
     window.currentHighlightDecoration = editor.deltaDecorations([], [decoration]);
 }
 
-function formatVars(vars) {
+// function formatVars(vars) {
+//     let formatted = [];
+//     console.log('vars:', vars);
+//     for (let name in vars) {
+//         if (vars.hasOwnProperty(name)) {
+//             let [type, value] = vars[name];
+//             if (type === 'array') {
+//                 value = '[' + value.join(', ') + ']';
+//             }
+//             let formattedKey = name.replace(/-\d+$/, '');
+//             formatted.push(`${formattedKey} : ${type} == ${value}`);
+//         }
+//     }
+//     return formatted.join('<br>');
+// }
+
+function formatCallStack(call_stack) {
     let formatted = [];
-    for (let key in vars) {
-        if (vars.hasOwnProperty(key)) {
-            let value = vars[key];
-            // Format arrays differently
-            if (Array.isArray(value)) {
+    for (let depth = 0; depth < call_stack.length; depth++) {
+        const call_stack_layer = call_stack[depth];
+        for (const [name, [type, value]] of call_stack_layer) {
+            if (type === 'array') {
                 value = '[' + value.join(', ') + ']';
             }
-            // Remove unique identifiers from keys if present (e.g., "x-2811100" becomes "x")
-            let formattedKey = key.replace(/-\d+$/, '');
-            formatted.push(`${formattedKey}: ${value}`);
+            // let formattedKey = name.replace(/-\d+$/, '');
+            formatted.push(`depth ${depth} | ${name} : ${type} = ${value}`);
         }
     }
+    // for (let name in vars) {
+    //     if (vars.hasOwnProperty(name)) {
+    //         let [type, value] = vars[name];
+    //         if (type === 'array') {
+    //             value = '[' + value.join(', ') + ']';
+    //         }
+    //         let formattedKey = name.replace(/-\d+$/, '');
+    //         formatted.push(`${formattedKey} : ${type} == ${value}`);
+    //     }
+    // }
     return formatted.join('<br>');
 }
 
@@ -146,29 +170,64 @@ runButton.addEventListener('click', async () => {
         const traceCode = await (await fetch(traceCodePath)).text();
         pyodide.runPython(traceCode);
         const stepsProxy = pyodide.globals.get('steps').toJs();
-        const steps = stepsProxy.map(([lineno, localVarsProxy, globalVarsProxy, nodes, comments]) => {
-            const localVars = Object.fromEntries(localVarsProxy);
-            const globalVars = Object.fromEntries(globalVarsProxy);
-            return [lineno, localVars, globalVars, nodes, comments];
+
+        const steps = stepsProxy.map(([lineno, call_stack_with_proxy_maps, nodes]) => {
+            let call_stack = call_stack_with_proxy_maps.map(proxyMap => new Map(proxyMap));
+            return [lineno, call_stack, nodes];
         });
         console.log('JavaScript steps:', steps);
-        for (const [lineno, localVars, globalVars, nodes, comments] of steps) {
-            // Check if execution has been stopped
-            // if (isStopped) {
-            //     console.log('Execution stopped.');
-            //     break;
-            // }
-    
+        for (const [lineno, call_stack, nodes] of steps) {
             while (isPaused) {
                 await new Promise(resolve => setTimeout(resolve, 100)); // Wait a bit before checking again
             }
-        
-            console.log(`Line ${lineno}:\n└─ Local variables:`, localVars, '\n└─ Global variables:', globalVars, '\n└─ AST Node Types:', nodes, '\n└─ Comments:', comments);
+            console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', nodes);
             highlightLine(editor, lineno);
-            visualContent.innerHTML = `Local variables:<br>${formatVars(localVars)}<br><br>Global variables:<br>${formatVars(globalVars)}`;
+            visualContent.innerHTML = `Variables:<br>${formatCallStack(call_stack)}`;
             await new Promise(resolve => setTimeout(resolve, 500));
-        }        
-        // isStopped = false;
+        }
+
+        
+        // const steps = stepsProxy.map(([lineno, varsProxy, nodes]) => {
+        //     const vars = Object.fromEntries(varsProxy);
+        //     return [lineno, vars, nodes];
+        // });
+        // console.log('JavaScript steps:', steps);
+        // for (const [lineno, vars, nodes] of steps) {
+        //     while (isPaused) {
+        //         await new Promise(resolve => setTimeout(resolve, 100)); // Wait a bit before checking again
+        //     }
+        //     console.log(`Line ${lineno}:\n└─ Variables:`, vars, '\n└─ AST Node Types:', nodes);
+        //     highlightLine(editor, lineno);
+        //     visualContent.innerHTML = `Variables:<br>${formatVars(vars)}`;
+        //     await new Promise(resolve => setTimeout(resolve, 500));
+        // }
+
+
+
+        // const steps = stepsProxy.map(([lineno, varsProxy, nodes]) => {
+        //     const localVars = Object.fromEntries(localVarsProxy);
+        //     const globalVars = Object.fromEntries(globalVarsProxy);
+        //     return [lineno, localVars, globalVars, nodes, comments];
+        // });
+        // for (const [lineno, localVars, globalVars, nodes, comments] of steps) {
+        //     // Check if execution has been stopped
+        //     // if (isStopped) {
+        //     //     console.log('Execution stopped.');
+        //     //     break;
+        //     // }
+    
+        //     while (isPaused) {
+        //         await new Promise(resolve => setTimeout(resolve, 100)); // Wait a bit before checking again
+        //     }
+        
+        //     console.log(`Line ${lineno}:\n└─ Variables:`, vars, '\n└─ AST Node Types:', nodes, '\n└─ Comments:', comments);
+        //     highlightLine(editor, lineno);
+        //     visualContent.innerHTML = `Local variables:<br>${formatVars(localVars)}<br><br>Global variables:<br>${formatVars(globalVars)}`;
+        //     await new Promise(resolve => setTimeout(resolve, 500));
+        // }        
+        // // isStopped = false;
+
+
     } catch (error) {
         console.error('Error during execution:', error);
     } finally {
