@@ -58,7 +58,7 @@ const initPyodide = () => {
     })
 }
 
-const samplePath = './sample.py';
+const samplePath = './sample2.py'; // DEBUG
 const sample = await (await fetch(samplePath)).text();
 await initMonaco();
 let editor;
@@ -123,7 +123,7 @@ function formatCallStack(call_stack) {
     let formatted = [];
     for (let depth = 0; depth < call_stack.length; depth++) {
         const call_stack_layer = call_stack[depth];
-        for (const [name, [type, value]] of call_stack_layer) {
+        for (let [name, [type, value]] of call_stack_layer) {
             if (type === 'array') {
                 value = '[' + value.join(', ') + ']';
             }

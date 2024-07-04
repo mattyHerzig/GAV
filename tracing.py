@@ -38,7 +38,7 @@ python_type_to_type = { # type(value).__name__ : type
     "str": "string",
 }
 
-inferred_type = {} # (name, depth) : type # (type is heap, graph representations, etc.)
+inferred_type = {} # (name, depth) : type # (type e.g. heap, graph representations, etc.)
 
 call_stack = [] # depth : {name : (type, value)} # global is 0
 
@@ -48,13 +48,10 @@ def get_type(name, value, depth):
     return inferred_type.get((name, depth), python_type_to_type.get(type(value).__name__, type(value).__name__))
 
 def trace_func(frame, event, arg):
+    if event == 'return': print('return with line', lines[frame.f_lineno]) # DEBUG
     # if frame.f_lineno == 0: return trace_func # TODO: also handle lines being called twice? Eg with different events  
     if event == 'call':
         call_stack.append({})
-    elif event == 'return': # TODO: if the return event happens before returning, need to move this to the end of this function
-        # for name, value_id in call_stack[-1].keys():
-        #     del var_to_depth[(name, value_id)]
-        call_stack.pop() 
     depth = len(call_stack) - 1
     if depth < 0:
         return trace_func
@@ -79,8 +76,11 @@ def trace_func(frame, event, arg):
                 # var_to_depth[(name, value_id)] = depth
         call_stack[depth].update(local_vars)
     node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if frame.f_lineno in lineno_to_nodes and lineno_to_nodes[frame.f_lineno] else [] # Temporarily just using type name for demonstration
-    steps.append((frame.f_lineno, deepcopy(call_stack), node_types))
-    # print('deepcopy(call_stack):', deepcopy(call_stack)) # DEBUG
+    steps.append((frame.f_lineno, deepcopy(call_stack), node_types)) 
+    if event == 'return':
+        # for name, value_id in call_stack[-1].keys():
+        #     del var_to_depth[(name, value_id)]
+        call_stack.pop()
     return trace_func
 
 sys.settrace(trace_func)
