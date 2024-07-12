@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Algorithm Visualizer</title>
+    <link rel="stylesheet" type="text/css" href="index.css"/>
+    <script src="https://unpkg.com/monaco-editor/min/vs/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/dev/full/pyodide.js"></script> <!-- https://pyodide.org/en/stable/usage/downloading-and-deploying.html -->
+    <script defer type="module" src="./index.js"></script>
+</head>
+<body>
+    <!-- <nav>
+        <a href="./index.html">Home</a>
+        <a href="./index.html">Interface</a>
+    </nav> -->
+    <div id="title">
+        <h1>General Algorithm Visualizer</h1>
+    </div>
+    <div id="content">
+        <div id="visual">
+            <!-- <h2>Visual</h2> -->
+            <div id="visual-content">
+                <canvas id="canvas"></canvas>
+            </div>
+        </div>
+        <div id="editor"></div>
+    </div>
+    <div class="slider-container">
+        <input type="range" min="0" max="0" value="0" id="step-slider">
+        <div class="step-highlight-container"></div>
+    </div>
+    <div class="button-container">
+        <button id="play-button">
+            <img src="./assets/build.svg" class="icon">
+            Build
+        </button>
+    </div>
+</body>
+</html>

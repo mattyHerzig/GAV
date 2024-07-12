@@ -1,0 +1,113 @@
+nav {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background-color: #1b1b1b;
+    color: white;
+    border-bottom: 3px solid #333;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial;
+    background-color: #1b1b1b;
+}
+#editor {
+    width: 50%;
+    height: 500px;
+    /* border: 5px solid #333; */
+}
+#title {
+    text-align: center;
+    font-size: 20px;
+    margin-top: 10px;
+    /* font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; */
+    color: white;
+    white-space: nowrap;
+    display: flex;
+    justify-content: center;
+}
+#content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+}
+#visual {
+    width: 50%;
+    height: 500px;
+    /* border: 5px solid #333; */
+    background-color: #333;
+    color: white;
+    text-align: center;
+}
+#visual-content {
+    text-align: left;
+    margin-left: 10px;   
+}
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    margin-bottom: 20px;
+}
+button {
+    padding: 10px 30px;
+    margin: 0 20px;
+    font-size: 20px;
+    background-color: #333;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 50px;
+}
+#step-slider {
+    /* display: flex; */
+    /* justify-content: center; */
+    /* align-items: center; */
+    width: 100%;
+    /* margin: 0 auto; */
+    visibility: hidden;
+}
+.slider-container {
+  position: relative;
+  width: 50%;
+  margin: 0 auto;
+  margin-top: 10px;
+}
+.step-highlight-container {
+  margin-top: 20px;
+  position: absolute;
+  width: 100%;
+  top: -10px; /* Adjust based on your slider's design */
+  display: flex;
+  justify-content: space-between;
+  /* border: 2px solid white; */
+}
+.step-highlight {
+  position: absolute;
+  height: 10px;
+  width: 10px;
+  background-color: red; /* Highlight color */
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+.first-letter {
+    color: rgb(178, 0, 0);
+}
+.line-highlight {
+    background-color: rgba(255, 255, 0, 0.2); /* Yellow with transparency */
+}
+.icon {
+    width: 20px;
+    height: 20px;
+    /* margin: 0 10px; */
+    margin-left: -15px;
+    cursor: pointer;
+}
