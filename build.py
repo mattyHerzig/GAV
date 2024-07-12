@@ -9,6 +9,7 @@ import sys
 import ast
 import tokenize
 from copy import deepcopy
+import io
 
 tree = ast.parse(code)
 lineno_to_nodes = {}
@@ -78,7 +79,8 @@ def trace_func(frame, event, arg):
                 # var_to_depth[(name, value_id)] = depth
         call_stack[depth].update(local_vars)
     node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if frame.f_lineno in lineno_to_nodes and lineno_to_nodes[frame.f_lineno] else [] # Temporarily just using type name for demonstration
-    steps.append((frame.f_lineno, deepcopy(call_stack), node_types)) 
+    stdout = sys.stdout.getvalue()
+    steps.append((frame.f_lineno, deepcopy(call_stack), node_types, stdout)) 
     if frame.f_lineno not in lineno_to_steps:
         lineno_to_steps[frame.f_lineno] = []
     lineno_to_steps[frame.f_lineno].append(len(steps) - 1)
@@ -88,9 +90,11 @@ def trace_func(frame, event, arg):
         call_stack.pop()
     return trace_func
 
+sys.stdout = io.StringIO()
 sys.settrace(trace_func)
 exec(code, {}) # TODO: do {}, {} if needed
 sys.settrace(None)
+# sys.stdout = sys.__stdout__
 
 # TODO: format steps for JavaScript e.g. can't use tuples as keys, but no longer need value_id anyways
 # print("Python steps:", steps)

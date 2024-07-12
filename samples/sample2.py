@@ -1,5 +1,6 @@
 x = 3
 def f(x):
+    print('x:', x)
     if x == 0:
         return 0
     if x == 3:

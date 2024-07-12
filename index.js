@@ -6,12 +6,32 @@ const playButtonState = Object.freeze({
     Pause: 'Pause',
 });
 
+const NameToImage = new Map();
+
+function preloadPlayButtonImages() {
+    for (const key in playButtonState) {
+        if (playButtonState.hasOwnProperty(key)) {
+            const value = playButtonState[key];
+            const img = new Image();
+            img.src = `./assets/${value.toLowerCase()}.svg`;
+            img.alt = value;
+            img.className = 'icon';
+            NameToImage.set(value, img);
+        }
+    }
+}
+
+preloadPlayButtonImages();
+
 function getPlayButtonState() {
     return playButton.innerText.trim();
 }
 
 function setPlayButtonState(newPlayButtonState) {
-    playButton.innerHTML = `<img src="./assets/${newPlayButtonState.toLowerCase()}.svg" alt="${newPlayButtonState}" class="icon"> ${newPlayButtonState}`;
+    // playButton.innerHTML = `<img src="./assets/${newPlayButtonState.toLowerCase()}.svg" alt="${newPlayButtonState}" class="icon"> ${newPlayButtonState}`;
+    playButton.innerHTML = '';
+    playButton.appendChild(NameToImage.get(newPlayButtonState));
+    playButton.appendChild(document.createTextNode(newPlayButtonState));
 }
 
 const stepSlider = document.getElementById('step-slider');
@@ -43,20 +63,20 @@ function getStepSliderMax() {
 const stepHighlightContainer = document.querySelector('.step-highlight-container');
 
 // TODO
-function highlightSteps(steps) {
-    steps.forEach(step => {
+function highlightSteps(_steps) {
+    _steps.forEach(step => {
         const stepHighlight = document.createElement('div');
         stepHighlight.classList.add('step-highlight');
         stepHighlight.setAttribute('step', step);
-        const position = (step - stepSlider.min) / (stepSlider.max - stepSlider.min) * 100;
-        stepHighlight.style.left = `${position}%`;
+        const position = (step - getStepSliderMin()) / (getStepSliderMax() - getStepSliderMin()) * 100;
+        stepHighlight.style.left = `${position}%`; // TODO: visible slider position doesn't go to the edges and therefore doesn't exactly match up with the highlight position
         stepHighlightContainer.appendChild(stepHighlight);
     });
 }
 
-function unhighlightSteps(steps) {
-    steps.forEach(step => {
-        const highlights = document.querySelectorAll(`.highlight[step="${step}"]`);
+function unhighlightSteps(_steps) {
+    _steps.forEach(step => {
+        const highlights = stepHighlightContainer.querySelectorAll(`.step-highlight[step="${step}"]`);
         highlights.forEach(highlight => {
             stepHighlightContainer.removeChild(highlight);
         });
@@ -120,6 +140,7 @@ stepSlider.addEventListener('mouseup', () => {
 });
 
 const visualContent = document.getElementById('visual-content');
+const terminal = document.getElementById('terminal');
 
 let mouseListener;
 let editor;
@@ -129,12 +150,13 @@ function reset() {
     // stepSlider.removeEventListener('input', stepSliderEventListenerFunction);
     stepSlider.style.visibility = 'hidden';
     mouseListener.dispose();
-    // unhightlightLines(); // TODO: this instead of below
+    // unhighlightLines(); // TODO: this instead of below
     if (window.currentHighlightDecoration) {
         editor.deltaDecorations(window.currentHighlightDecoration, []);
         window.currentHighlightDecoration = null;
     }
     visualContent.innerHTML = '';
+    terminal.innerText = '';
     stopPlaying = true;
     setPlayButtonState(playButtonState.Build);
 }
@@ -151,6 +173,11 @@ require(['vs/editor/editor.main'], () => {
         lineNumbers: 'on',
         stickyScroll: { enabled: false},
         folding: false,
+        // glyphMargin: true,
+        lineNumbersMinChars: 3,
+        // lineDecorationsWidth: 5,
+        // fontSize: '20px',
+        // mouseWheelZoom: true,
         // renderLineHighlight: 'none',
     });
     editor.getModel().onDidChangeContent((e) => {
@@ -170,6 +197,7 @@ function build() {
     pyodide.globals.set('code', editor.getValue());
     pyodide.runPython(buildCode);
     steps = pyodide.globals.get('steps').toJs(), linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
+    // console.log('steps', steps, 'linenoToSteps', linenoToSteps); // DEBUG
 }
 
 function setup() {
@@ -181,18 +209,30 @@ function setup() {
         if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
             // TODO: Disable the line from being selected
             const lineno = e.target.position.lineNumber;
+            // console.log('typeof lineno:', typeof lineno, 'lineno:', lineno, 'e:', e);
+            const _steps = linenoToSteps.get(lineno);
             console.log('Line number clicked:', lineno);
-            const steps = linenoToSteps[lineno];
+            // console.log('linenoToSteps', linenoToSteps);
+            // console.log('_steps:', _steps);
+            if (!linenoIsHighlighted(lineno)) { // I'm assuming that lineno and steps are one-to-one, so we don't have to also have a lineno attribute for step-highlights
+                highlightLineno(lineno);
+                highlightSteps(_steps);
+            } else {
+                unhighlightLineno(lineno);
+                unhighlightSteps(_steps);
+            }
         }
     });
     setPlayButtonState(playButtonState.Play);
 }
 
 function processStep(step) {
-    const [lineno, call_stack, nodes] = steps[step];
-    console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', nodes);
+    const [lineno, call_stack, node_types, stdout] = steps[step];
+    console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
+    unhighlightLines();
     highlightLine(lineno);
     visualContent.innerHTML = /*`Variables:<br>${*/formatCallStack(call_stack)/*}`*/;
+    terminal.innerText = stdout;
 }
 
 async function play() {
@@ -201,7 +241,7 @@ async function play() {
     if (/*getStepSliderValue() < getStepSliderMin() || */getStepSliderValue() >= getStepSliderMax()) {
         setStepSliderValue(getStepSliderMin());
     }
-    while (getStepSliderValue() <= getStepSliderMax()) {
+    while (getStepSliderValue() <= getStepSliderMax()) { // TODO: simplify logic
         if (stopPlaying) {
             break;
         }
@@ -224,33 +264,74 @@ function pause() {
     setPlayButtonState(playButtonState.Play);
 }
 
+let highlightDecorationIds = [];
+
 function highlightLine(lineno) {
-    unhightlightLines();
-    // if (window.currentHighlightDecoration) {
-    //     editor.deltaDecorations(window.currentHighlightDecoration, []);
-    // }
-    window.currentHighlightDecoration = editor.deltaDecorations([], [{
-        range: {
-            startLineNumber: lineno,
-            startColumn: 1,
-            endLineNumber: lineno,
-            endColumn: 1,
-        },
+    window.currentHighlightDecoration = editor.deltaDecorations(highlightDecorationIds, [{
+        range: new monaco.Range(lineno, 1, lineno, 1),
         options: {
             isWholeLine: true,
-            className: 'line-highlight'
-        }
+            className: 'line-highlight',
+            // lineNumberClassName: 'line-highlight',
+        },
     }]);
 }
 
-function unhightlightLines() {
+function unhighlightLines() {
     if (window.currentHighlightDecoration) {
         editor.deltaDecorations(window.currentHighlightDecoration, []);
         window.currentHighlightDecoration = null;
     }
 }
 
-playButton.addEventListener('click', () => { // TODO: async?
+// let highlightCollection;
+
+// function highlightLine(lineno) {
+//     highlightCollection = editor.createDecorationsCollection({
+//         options: {
+//             isWholeLine: true,
+//             className: 'line-highlight',
+//             // lineNumberClassName: 'line-highlight',
+//         },
+//         range: {
+//             endColumn: 1,
+//             endLineNumber: lineno,
+//             startColumn: 1,
+//             startLineNumber: lineno,
+//         }
+//     });
+// }
+
+// function unhighlightLines() {
+//     if (highlightCollection) {
+//         highlightCollection.clear();
+//     }
+// }
+
+let linenoToDecorationIds = new Map();
+
+function highlightLineno(lineno) {
+    const currentDecorations = linenoToDecorationIds.get(lineno) || [];
+    const newDecorations = editor.deltaDecorations(currentDecorations, [{
+        range: new monaco.Range(lineno, 1, lineno, 1),
+        options: { lineNumberClassName: 'lineno-highlight' }
+    }]);
+    linenoToDecorationIds.set(lineno, newDecorations);
+}
+
+function unhighlightLineno(lineno) {
+    const decorationsToRemove = linenoToDecorationIds.get(lineno);
+    if (decorationsToRemove) {
+        editor.deltaDecorations(decorationsToRemove, []);
+        linenoToDecorationIds.delete(lineno);
+    }
+}
+
+function linenoIsHighlighted(lineno) {
+    return linenoToDecorationIds.has(lineno);
+}
+
+playButton.addEventListener('click', () => {
     switch (getPlayButtonState()) {
         case playButtonState.Build:
             build();
