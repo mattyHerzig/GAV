@@ -1,3 +1,19 @@
+const playButton = document.getElementById('play-button');
+
+const playButtonState = Object.freeze({
+    Build: 'Build',
+    Play: 'Play',
+    Pause: 'Pause',
+});
+
+function getPlayButtonState() {
+    return playButton.innerText.trim();
+}
+
+function setPlayButtonState(newPlayButtonState) {
+    playButton.innerHTML = `<img src="./assets/${newPlayButtonState.toLowerCase()}.svg" alt="${newPlayButtonState}" class="icon"> ${newPlayButtonState}`;
+}
+
 const stepSlider = document.getElementById('step-slider');
 
 function setStepSliderValue(value) {
@@ -76,60 +92,41 @@ let currentTimeout = null;
 const speed = 300; // TODO: configurable speed
 let initialPlayButtonState;
 
+let stopPlaying;
+
 stepSlider.addEventListener('mousedown', () => {
     console.log('Step slider mousedown:', getStepSliderValue());
     initialPlayButtonState = getPlayButtonState();
+    stopPlaying = true;
 });
 
 stepSlider.addEventListener('input', () => {
-    console.log('Step slider changed:', getStepSliderValue());
+    console.log('Step slider input:', getStepSliderValue());
     processStep(getStepSliderValue()); // parseInt(this.value)
-    clearTimeout(currentTimeout); // TODO: make later `await` account for currentTimeout being updated
-    // currentTimeout = new Promise(resolve => setTimeout(resolve, Infinity));
+    if (initialPlayButtonState === playButtonState.Pause) {
+        if (getStepSliderValue() == getStepSliderMax()) {
+            setPlayButtonState(playButtonState.Play);
+        } else {
+            setPlayButtonState(playButtonState.Pause);
+        }
+    }
 });
 
 stepSlider.addEventListener('mouseup', () => {
-    // if (currentTimeout !== null) {
-    //     clearTimeout(currentTimeout);
-    // }
-    // currentTimeout = new Promise(resolve => {
-    //     setTimeout(() => {
-    //         resolve();
-    //         console.log('Timeout after mouseup completed');
-    //         // Place any code here that should execute after the timeout
-    //     }, speed);
-    // });
     console.log('Step slider mouseup', getStepSliderValue());
-    currentTimeout = new Promise(resolve => setTimeout(resolve, speed));
+    if (initialPlayButtonState === playButtonState.Pause) {
+        play();
+    }
 });
 
 const visualContent = document.getElementById('visual-content');
 
-// const playButtonState = Object.freeze({
-//     BUILD: "Build",
-//     PLAY: "Play",
-//     PAUSE: "Pause",
-// });
-
-// state is "Build", "Play", or "Pause"
-const playButton = document.getElementById('play-button');
-
-function getPlayButtonState() {
-    return playButton.innerText.trim();
-}
-
-function setPlayButtonState(newPlayButtonState) {
-    playButton.innerHTML = `<img src="./assets/${newPlayButtonState.toLowerCase()}.svg" alt="${newPlayButtonState}" class="icon"> ${newPlayButtonState}`;
-}
-
 let mouseListener;
 let editor;
 
-let isPaused; // TODO: refactor to isPlaying if clearer considering e.g. reset()
-
 function reset() {
-    setPlayButtonState('Build');
-    isPaused = true;
+    setPlayButtonState(playButtonState.Build);
+    stopPlaying = true;
     // stepSlider.removeEventListener('input', stepSliderEventListenerFunction);
     stepSlider.style.visibility = 'hidden';
     mouseListener.dispose();
@@ -175,7 +172,7 @@ function build() {
 }
 
 function setup() {
-    setPlayButtonState('Play')
+    setPlayButtonState(playButtonState.Play);
     setStepSliderValue(getStepSliderMin());
     setStepSliderMax(steps.length - 1);
     // stepSlider.addEventListener('input', stepSliderEventListenerFunction);
@@ -204,34 +201,31 @@ function processStep(step) {
 }
 
 async function play() {
-    isPaused = false;
-    setPlayButtonState('Pause');
+    stopPlaying = false;
+    setPlayButtonState(playButtonState.Pause);
     if (/*getStepSliderValue() < getStepSliderMin() || */getStepSliderValue() >= getStepSliderMax()) {
         setStepSliderValue(getStepSliderMin());
     }
     while (getStepSliderValue() <= getStepSliderMax()) {
-        if (isPaused) {
+        if (stopPlaying) {
             break;
         }
         processStep(getStepSliderValue());
         currentTimeout = new Promise(resolve => setTimeout(resolve, 300));
         await currentTimeout;
-        if (isPaused) {
+        if (stopPlaying || getPlayButtonState() !== playButtonState.Pause || getStepSliderValue() >= getStepSliderMax()) {
             break;
         }
-        if (getStepSliderValue() < getStepSliderMax()) {
-            setStepSliderValue(getStepSliderValue() + 1);
-        } else {
-            break;
-        }
+        setStepSliderValue(getStepSliderValue() + 1);
     }
-    if (getPlayButtonState() === 'Pause') {
-        setPlayButtonState('Play');
+    if (getStepSliderValue() == getStepSliderMax()) {
+        setPlayButtonState(playButtonState.Play);
     }
 }
 
 function pause() {
-    isPaused = true;
+    setPlayButtonState(playButtonState.Play);
+    stopPlaying = true;
 }
 
 function highlightLine(lineno) {
@@ -262,14 +256,14 @@ function unhightlightLines() {
 
 playButton.addEventListener('click', () => { // TODO: async?
     switch (getPlayButtonState()) {
-        case 'Build':
+        case playButtonState.Build:
             build();
             setup();
             break;
-        case 'Play':
+        case playButtonState.Play:
             play();
             break;
-        case 'Pause':
+        case playButtonState.Pause:
             pause();
             break;
     }
