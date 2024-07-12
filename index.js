@@ -114,7 +114,7 @@ stepSlider.addEventListener('input', () => {
 
 stepSlider.addEventListener('mouseup', () => {
     console.log('Step slider mouseup', getStepSliderValue());
-    if (initialPlayButtonState === playButtonState.Pause) {
+    if (getStepSliderValue() < getStepSliderMax() && initialPlayButtonState === playButtonState.Pause) {
         play();
     }
 });
@@ -125,7 +125,6 @@ let mouseListener;
 let editor;
 
 function reset() {
-    setPlayButtonState(playButtonState.Build);
     stopPlaying = true;
     // stepSlider.removeEventListener('input', stepSliderEventListenerFunction);
     stepSlider.style.visibility = 'hidden';
@@ -136,6 +135,8 @@ function reset() {
         window.currentHighlightDecoration = null;
     }
     visualContent.innerHTML = '';
+    stopPlaying = true;
+    setPlayButtonState(playButtonState.Build);
 }
 
 const sampleCode = await (await fetch('./samples/sample2.py')).text();
@@ -165,32 +166,26 @@ const buildCode = await (await fetch('./build.py')).text();
 let steps, linenoToSteps;
 
 function build() {
-    // TODO: For now, we can ignore edge cases (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
+    // TODO: For now, we can ignore nontrivial formatting (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
     pyodide.globals.set('code', editor.getValue());
     pyodide.runPython(buildCode);
     steps = pyodide.globals.get('steps').toJs(), linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
 }
 
 function setup() {
-    setPlayButtonState(playButtonState.Play);
     setStepSliderValue(getStepSliderMin());
     setStepSliderMax(steps.length - 1);
     // stepSlider.addEventListener('input', stepSliderEventListenerFunction);
     stepSlider.style.visibility = 'visible';
-    mouseListener = editor.onMouseDown((e) => {
+    mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
         if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
             // TODO: Disable the line from being selected
             const lineno = e.target.position.lineNumber;
             console.log('Line number clicked:', lineno);
-            // editor.deltaDecorations([], [{
-            //     range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-            //     options: {
-            //         isWholeLine: true,
-            //         className: 'line-highlight'
-            //     }
-            // }]);
+            const steps = linenoToSteps[lineno];
         }
     });
+    setPlayButtonState(playButtonState.Play);
 }
 
 function processStep(step) {
@@ -211,21 +206,22 @@ async function play() {
             break;
         }
         processStep(getStepSliderValue());
+        if (getStepSliderValue() >= getStepSliderMax()) {
+            setPlayButtonState(playButtonState.Play);
+            break;
+        }
         currentTimeout = new Promise(resolve => setTimeout(resolve, 300));
         await currentTimeout;
-        if (stopPlaying || getPlayButtonState() !== playButtonState.Pause || getStepSliderValue() >= getStepSliderMax()) {
+        if (stopPlaying) {
             break;
         }
         setStepSliderValue(getStepSliderValue() + 1);
     }
-    if (getStepSliderValue() == getStepSliderMax()) {
-        setPlayButtonState(playButtonState.Play);
-    }
 }
 
 function pause() {
-    setPlayButtonState(playButtonState.Play);
     stopPlaying = true;
+    setPlayButtonState(playButtonState.Play);
 }
 
 function highlightLine(lineno) {
