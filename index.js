@@ -62,7 +62,6 @@ function getStepSliderMax() {
 
 const stepHighlightContainer = document.querySelector('.step-highlight-container');
 
-// TODO
 function highlightSteps(_steps) {
     _steps.forEach(step => {
         const stepHighlight = document.createElement('div');
@@ -115,13 +114,13 @@ let initialPlayButtonState;
 let stopPlaying;
 
 stepSlider.addEventListener('mousedown', () => {
-    console.log('Step slider mousedown:', getStepSliderValue());
+    // console.log('Step slider mousedown:', getStepSliderValue());
     initialPlayButtonState = getPlayButtonState();
     stopPlaying = true;
 });
 
 stepSlider.addEventListener('input', () => {
-    console.log('Step slider input:', getStepSliderValue());
+    // console.log('Step slider input:', getStepSliderValue());
     processStep(getStepSliderValue()); // parseInt(this.value)
     if (initialPlayButtonState === playButtonState.Pause) {
         if (getStepSliderValue() == getStepSliderMax()) {
@@ -133,7 +132,7 @@ stepSlider.addEventListener('input', () => {
 });
 
 stepSlider.addEventListener('mouseup', () => {
-    console.log('Step slider mouseup', getStepSliderValue());
+    // console.log('Step slider mouseup', getStepSliderValue());
     if (getStepSliderValue() < getStepSliderMax() && initialPlayButtonState === playButtonState.Pause) {
         play();
     }
@@ -182,7 +181,7 @@ require(['vs/editor/editor.main'], () => {
     });
     editor.getModel().onDidChangeContent((e) => {
         // TODO: ask the user for confirmation to reset, "don't tell me again"
-        console.log('Editor code changed');
+        // console.log('Editor code changed');
         reset();
     });
 });
@@ -211,7 +210,7 @@ function setup() {
             const lineno = e.target.position.lineNumber;
             // console.log('typeof lineno:', typeof lineno, 'lineno:', lineno, 'e:', e);
             const _steps = linenoToSteps.get(lineno);
-            console.log('Line number clicked:', lineno);
+            // console.log('Line number clicked:', lineno);
             // console.log('linenoToSteps', linenoToSteps);
             // console.log('_steps:', _steps);
             if (!linenoIsHighlighted(lineno)) { // I'm assuming that lineno and steps are one-to-one, so we don't have to also have a lineno attribute for step-highlights
@@ -228,7 +227,7 @@ function setup() {
 
 function processStep(step) {
     const [lineno, call_stack, node_types, stdout] = steps[step];
-    console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
+    // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
     unhighlightLines();
     highlightLine(lineno);
     visualContent.innerHTML = /*`Variables:<br>${*/formatCallStack(call_stack)/*}`*/;
