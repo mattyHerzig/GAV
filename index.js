@@ -82,8 +82,16 @@ function unhighlightSteps(_steps) {
     });
 }
 
+function unhighlightAllSteps() {
+    while (stepHighlightContainer.firstChild) {
+        stepHighlightContainer.removeChild(stepHighlightContainer.firstChild);
+    }
+}
+
 // TODO: would be more robust and elegant to use a recursive function to format each variable e.g. consider nested arrays, maps, and sets
 // TODO: handles e.g. hash map with tuples as keys, which is allowed in Python but not in JavaScript?
+// TODO: distinguish between int and float?
+// TODO: Infinity -> eg ∞
 function formatCallStack(call_stack) {
     let formatted = [];
     for (let depth = 0; depth < call_stack.length; depth++) {
@@ -157,9 +165,12 @@ function reset() {
     visualContent.innerHTML = '';
     terminal.innerText = '';
     stopPlaying = true;
+    unhighlightAllSteps();
+    unhighlightAllLineno();
     setPlayButtonState(playButtonState.Build);
 }
 
+// TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
 const sampleCode = await (await fetch('./samples/sample2.py')).text();
 require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor/min/vs' } });
 require(['vs/editor/editor.main'], () => {
@@ -229,6 +240,7 @@ function processStep(step) {
     const [lineno, call_stack, node_types, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
     unhighlightLines();
+    // prevent last step line highlight with `if (step < steps.length - 1)`? also prevent first step? (currently inconsistent, not highlighted after built but highlighted after going there. initialize steps with empty content for a step before all other steps?)
     highlightLine(lineno);
     visualContent.innerHTML = /*`Variables:<br>${*/formatCallStack(call_stack)/*}`*/;
     terminal.innerText = stdout;
@@ -242,17 +254,17 @@ async function play() {
     }
     while (getStepSliderValue() <= getStepSliderMax()) { // TODO: simplify logic
         if (stopPlaying) {
-            break;
+            return; // break
         }
         processStep(getStepSliderValue());
         if (getStepSliderValue() >= getStepSliderMax()) {
             setPlayButtonState(playButtonState.Play);
-            break;
+            return; // break
         }
-        currentTimeout = new Promise(resolve => setTimeout(resolve, 300));
+        currentTimeout = new Promise(resolve => setTimeout(resolve, speed));
         await currentTimeout;
         if (stopPlaying) {
-            break;
+            return; // break
         }
         setStepSliderValue(getStepSliderValue() + 1);
     }
@@ -324,6 +336,13 @@ function unhighlightLineno(lineno) {
         editor.deltaDecorations(decorationsToRemove, []);
         linenoToDecorationIds.delete(lineno);
     }
+}
+
+function unhighlightAllLineno() {
+    linenoToDecorationIds.forEach(decorations => {
+        editor.deltaDecorations(decorations, []);
+    });
+    linenoToDecorationIds.clear();
 }
 
 function linenoIsHighlighted(lineno) {
