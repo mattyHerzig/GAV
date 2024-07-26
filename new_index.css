@@ -1,0 +1,122 @@
+html {
+    height: 100%;
+    overflow-y: hidden;
+}
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: Arial;
+    background-color: #676767;
+    /* overflow-x: hidden; */
+    display: flex;
+    flex-direction: column;
+}
+button, #speed-container {
+    height: 100%;
+    border: 0;
+    padding: 1px 6px;
+    /* margin: 0; */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5ch;
+}
+button, #speed-container, #step-slider-container, #step-highlight-container, #speed-slider-container {
+    height: 100%;
+    background-color: #838383;
+}
+button {
+    cursor: pointer;
+}
+button:hover {
+    background-color: #474747; /* if needed, find a way to dark background color instead of hard coding this */
+}
+input[type="range"]:hover {
+	cursor: grab;
+}
+input[type="range"]:active {
+	cursor: grabbing;
+}
+#step-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    /* overflow: hidden */
+    /* background-color: #838383; */
+    /* outline: none; */
+    overflow: hidden;
+}
+#step-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0px;
+    background: red;
+    box-shadow: -15ch 0 0 15ch rgb(80, 255, 80);
+}
+#buttons::-webkit-scrollbar {
+    display: none;
+}
+#buttons {
+    height: 1.7em;
+    display: flex;
+    justify-content: space-between;
+    /* margin-top: 10px; */
+    overflow-x: scroll;
+    overflow-y: hidden; /* address root problem if needed */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    cursor: default; /* cursor pointer for buttons have greater specificity */
+}
+#buttons * {
+    font-size: 13px;
+    color: #ffffff;
+    user-select: none;
+}
+#right-buttons {
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    flex-shrink: 0;
+}
+#play-button {
+    min-width: 9ch;
+}
+#step-slider-container, #speed-slider-container { /* #step-hightlight-container? */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+#speed-slider-container {
+    padding-right: 6px;
+}
+#step-highlight-container {
+    width: 15ch;
+}
+#speed-slider {
+    width: 10ch;
+}
+.icon {
+    width: 1em;
+    height: 1em;
+    padding-bottom: 0.1em;
+}
+#content {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+}
+#editor {
+    width: min(50ch, 50%);
+    height: 100%;
+    background-color: #1e1e1e; /* same color as editor, once loaded */
+}
+#visual {
+    flex: 1 1;
+    width: 50%;
+    height: 100%;
+    background-color: #343434;
+}

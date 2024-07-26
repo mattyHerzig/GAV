@@ -182,6 +182,9 @@ require(['vs/editor/editor.main'], () => {
         minimap: { enabled: false },
         lineNumbers: 'on',
         stickyScroll: { enabled: false},
+        scrollbar: { vertical: 'hidden' },
+        overviewRulerBorder: false,
+        overviewRulerLanes: 0,
         folding: false,
         // glyphMargin: true,
         lineNumbersMinChars: 3,
@@ -189,6 +192,7 @@ require(['vs/editor/editor.main'], () => {
         // fontSize: '20px',
         // mouseWheelZoom: true,
         // renderLineHighlight: 'none',
+        automaticLayout: true,
     });
     editor.getModel().onDidChangeContent((e) => {
         // TODO: ask the user for confirmation to reset, "don't tell me again"
@@ -350,16 +354,17 @@ function linenoIsHighlighted(lineno) {
 }
 
 playButton.addEventListener('click', () => {
-    switch (getPlayButtonState()) {
-        case playButtonState.Build:
-            build();
-            setup();
-            break;
-        case playButtonState.Play:
-            play();
-            break;
-        case playButtonState.Pause:
-            pause();
-            break;
-    }
+    // // DEBUG: temporarily disabled
+    // switch (getPlayButtonState()) {
+    //     case playButtonState.Build:
+    //         build();
+    //         setup();
+    //         break;
+    //     case playButtonState.Play:
+    //         play();
+    //         break;
+    //     case playButtonState.Pause:
+    //         pause();
+    //         break;
+    // }
 });
