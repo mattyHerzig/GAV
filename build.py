@@ -18,13 +18,13 @@ for node in ast.walk(tree):
         if node.lineno not in lineno_to_nodes:
             lineno_to_nodes[node.lineno] = []
         lineno_to_nodes[node.lineno].append(node) # sort based on node.col_offset later?
-for lineno, nodes in lineno_to_nodes.items(): # DEBUG
-    print('ast nodes at line', lineno, ':', [type(node).__name__ for node in nodes]) 
+# for lineno, nodes in lineno_to_nodes.items(): # DEBUG
+#     print('ast nodes at line', lineno, ':', [type(node).__name__ for node in nodes]) 
 
 lineno_to_comment = {}
 for lineno, line in enumerate(lines):
     tokens = list(tokenize.tokenize(iter([line.encode('utf-8')]).__next__))
-    print('tokens at line', lineno, ':', tokens) # DEBUG
+    # print('tokens at line', lineno, ':', tokens) # DEBUG
     for token in tokens:
         if token.type == tokenize.COMMENT:
             lineno_to_comment[lineno] = token.string

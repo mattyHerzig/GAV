@@ -60,7 +60,7 @@ function getStepSliderMax() {
     return parseInt(stepSlider.max);
 }
 
-const stepHighlightContainer = document.querySelector('.step-highlight-container');
+const stepHighlightContainer = document.querySelector('#step-highlight-container');
 
 function highlightSteps(_steps) {
     _steps.forEach(step => {
@@ -146,7 +146,7 @@ stepSlider.addEventListener('mouseup', () => {
     }
 });
 
-const visualContent = document.getElementById('visual-content');
+const visualContent = document.getElementById('visual'); // TODO
 const terminal = document.getElementById('terminal');
 
 let mouseListener;
@@ -192,7 +192,7 @@ require(['vs/editor/editor.main'], () => {
         // fontSize: '20px',
         // mouseWheelZoom: true,
         // renderLineHighlight: 'none',
-        automaticLayout: true,
+        // automaticLayout: true,
     });
     editor.getModel().onDidChangeContent((e) => {
         // TODO: ask the user for confirmation to reset, "don't tell me again"
@@ -354,17 +354,16 @@ function linenoIsHighlighted(lineno) {
 }
 
 playButton.addEventListener('click', () => {
-    // // DEBUG: temporarily disabled
-    // switch (getPlayButtonState()) {
-    //     case playButtonState.Build:
-    //         build();
-    //         setup();
-    //         break;
-    //     case playButtonState.Play:
-    //         play();
-    //         break;
-    //     case playButtonState.Pause:
-    //         pause();
-    //         break;
-    // }
+    switch (getPlayButtonState()) {
+        case playButtonState.Build:
+            build();
+            setup();
+            break;
+        case playButtonState.Play:
+            play();
+            break;
+        case playButtonState.Pause:
+            pause();
+            break;
+    }
 });

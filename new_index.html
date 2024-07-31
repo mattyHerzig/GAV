@@ -10,32 +10,8 @@
     <script type="module" src="./index.js"></script> <!-- async or defer if needed -->
 </head>
 <body>
-    <div id="buttons">
-        <button id="examples-button">Examples</button>
-        <span id="right-buttons">
-            <button id="play-button">
-                <img src="./assets/build.svg" class="icon">
-                Build
-            </button>
-            <div id="step-slider-container">
-                <button id="step-left">
-                    <img src="./assets/left.svg" class="icon">
-                </button>
-                <span id="step-highlight-container">
-                    <input type="range" min="0" max="10" value="1" id="step-slider">
-                </span>
-                <button id="step-right">
-                    <img src="./assets/right.svg" class="icon">
-                </button>
-            </div>
-            <div id="speed-slider-container">
-                <div id="speed-container">Speed</div>
-                <input type="range" min="0" max="10" value="5" id="speed-slider">
-            </div>
-        </span>
-    </div>
     <div id="content">
-        <div id="editor"></div>
+        <div id="editor"></div> <!-- change to editor-container if needed -->
         <div id="visual">
             <div id="visual-space">
                 <div id="data-structures"></div>
@@ -44,6 +20,28 @@
             </div>
             <div id="editor-line"></div>
             <div id="terminal"></div>
+        </div>
+    </div>
+    <div id="buttons">
+        <button id="examples-button">Examples</button>
+        <button id="play-button">
+            <img src="./assets/build.svg" class="icon">
+            Build
+        </button>
+        <div id="step-slider-container">
+            <button id="step-left">
+                <img src="./assets/left.svg" class="icon">
+            </button>
+            <span id="step-highlight-container">
+                <input type="range" min="0" max="10" value="1" id="step-slider">
+            </span>
+            <button id="step-right">
+                <img src="./assets/right.svg" class="icon">
+            </button>
+        </div>
+        <div id="speed-slider-container">
+            <div id="speed-container">Speed</div>
+            <input type="range" min="0" max="10" value="5" id="speed-slider">
         </div>
     </div>
 </body>
