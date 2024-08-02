@@ -123,6 +123,7 @@ input[type="range"]:active {
     padding-right: 6px;
 }
 #step-highlight-container {
+    position: relative;
     width: 15ch;
 }
 #speed-slider {
@@ -251,3 +252,14 @@ input[type="range"]:active {
     display: flex;
     justify-content: center;
 } */
+#step-counter {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #000000;
+    pointer-events: none;
+}

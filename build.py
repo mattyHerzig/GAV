@@ -44,7 +44,7 @@ python_type_to_type = { # type(value).__name__ : type
 
 inferred_type = {} # {(name, depth) : type} # (type e.g. heap, graph representations, etc.) # TODO: remove when needed
 
-steps = [] # [(lineno, call_stack, node_types, stdout)]
+steps = [(1, [], [], '')] # [(lineno, call_stack, node_types, stdout)] # 1-indexed
 
 lineno_to_steps = {} # {lineno : [step]}
 

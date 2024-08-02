@@ -96,14 +96,15 @@ function setPlayButtonState(newPlayButtonState) {
 const stepSlider = document.getElementById('step-slider');
 const stepLeft = document.getElementById('step-left');
 const stepRight = document.getElementById('step-right');
+const stepCounter = document.getElementById('step-counter');
 
 function setStepSliderValue(value) {
     stepSlider.value = value.toString();
 }
 
-function setStepSliderMin(min) {
-    stepSlider.min = min.toString();
-}
+// function setStepSliderMin(min) { // effective minimum
+//     stepSlider.min = (min - 1).toString();
+// }
 
 function setStepSliderMax(max) {
     stepSlider.max = max.toString();
@@ -113,8 +114,8 @@ function getStepSliderValue() {
     return parseInt(stepSlider.value);
 }
 
-function getStepSliderMin() {
-    return parseInt(stepSlider.min);
+function getStepSliderMin() { // effective minimum
+    return parseInt(stepSlider.min) + 1;
 }
 
 function getStepSliderMax() {
@@ -172,6 +173,7 @@ function formatCallStack(call_stack) {
             }
             // let formattedKey = name.replace(/-\d+$/, '');
             formatted.push(`${_function} ${depth} | ${name} : ${type} = ${value}`);
+            // formatted.push(`${_function} ${depth} | ${name}` + (type === 'free' ? '^' : `: ${type} = ${value}`)); // DEBUG
         }
     }
     return '<br><br><br>&nbsp;&nbsp;&nbsp;' + formatted.join('<br>&nbsp;&nbsp;&nbsp;'); // TODO: better padding formatting
@@ -191,6 +193,9 @@ stepSlider.addEventListener('mousedown', () => {
 
 stepSlider.addEventListener('input', () => {
     // console.log('Step slider input:', getStepSliderValue());
+    if (getStepSliderValue() < getStepSliderMin()) {
+        setStepSliderValue(getStepSliderMin());
+    }
     processStep(getStepSliderValue()); // parseInt(this.value)
     if (initialPlayButtonState === playButtonState.Pause) {
         if (getStepSliderValue() == getStepSliderMax()) {
@@ -209,7 +214,7 @@ stepSlider.addEventListener('mouseup', () => {
 });
 
 stepLeft.addEventListener('click', () => {
-    setStepSliderValue(Math.max(0, getStepSliderValue() - 1));
+    setStepSliderValue(Math.max(getStepSliderMin(), getStepSliderValue() - 1));
     processStep(getStepSliderValue());
 });
 
@@ -257,7 +262,7 @@ function reset() {
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
 let editorLineEditor;
-const sampleCode = await (await fetch('./samples/sample4.py')).text();
+const sampleCode = await (await fetch('./samples/sample3.py')).text();
 require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
 require(['vs/editor/editor.main'], () => {
     editor = monaco.editor.create(document.getElementById('editor'), {
@@ -478,7 +483,7 @@ function mirrorLine(lineno) {
     });
 
     // document.getElementById('editor-line').style.textAlign = 'center';
-    
+
     // editorLineEditor.deltaDecorations([], [{
     //     range: new monaco.Range(lineno, 1, lineno, 1),
     //     options: {
@@ -493,11 +498,6 @@ function mirrorLine(lineno) {
     // console.timeEnd('mirrorLine');
 }
 
-
-
-
-
-
 function processStep(step) {
     const [lineno, call_stack, node_types, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
@@ -508,6 +508,7 @@ function processStep(step) {
     terminal.innerHTML = '<br><br><br>&nbsp;&nbsp;&nbsp;' + stdout.split('\n').join('<br>&nbsp;&nbsp;&nbsp;'); // TODO: better padding formatting
     // unmirrorPreviousLine();
     mirrorLine(lineno);
+    stepCounter.innerText = `${step}/${getStepSliderMax()}`;
 }
 
 async function play() {
