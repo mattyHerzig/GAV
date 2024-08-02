@@ -1,3 +1,62 @@
+
+
+
+
+
+
+// import * as monaco from 'monaco-editor';
+// import { loadPyodide } from 'pyodide';
+
+document.addEventListener('DOMContentLoaded', () => {
+    // const buttons = document.getElementById('buttons');
+    // const examplesButton = document.getElementById('examples-button') || document.getElementById('play-button');
+    const editor = document.getElementById('editor');
+    const resizer = document.getElementById('resize');
+    let xOffset;
+
+    // function updateButtonsPosition() {
+    //     const editorRight = editor.getBoundingClientRect().right;
+    //     const examplesButtonWidth = examplesButton.getBoundingClientRect().width;
+    //     let leftPosition = editorRight - examplesButtonWidth;
+    //     let rightPosition = leftPosition + buttons.getBoundingClientRect().width;
+
+    //     if (leftPosition < 0 || window.innerWidth < buttons.getBoundingClientRect().width ) {
+    //         leftPosition = 0;
+    //     } else if (rightPosition > window.innerWidth) {
+    //         leftPosition = window.innerWidth - buttons.getBoundingClientRect().width;
+    //     }
+        
+    //     buttons.style.left = `${leftPosition}px`;
+    // }
+
+    function resize(e) {
+        const clientXPercentage = ((e.clientX - xOffset) / window.innerWidth) * 100;
+        editor.style.width = `${clientXPercentage}vw`;
+        // updateButtonsPosition();
+    }
+
+    function stopResize() {
+        document.removeEventListener('mousemove', resize);
+        document.removeEventListener('mouseup', stopResize);
+    }
+
+    resizer.addEventListener('mousedown', function(e) { // TODO: mimic VS Code e.g. blue line
+        xOffset = e.clientX - editor.getBoundingClientRect().right;
+        document.addEventListener('mousemove', resize);
+        document.addEventListener('mouseup', stopResize);
+    });
+
+    // window.addEventListener('resize', updateButtonsPosition);
+    // updateButtonsPosition();
+});
+
+
+
+
+
+
+
+
 const playButton = document.getElementById('play-button');
 
 const playButtonState = Object.freeze({
@@ -35,6 +94,8 @@ function setPlayButtonState(newPlayButtonState) {
 }
 
 const stepSlider = document.getElementById('step-slider');
+const stepLeft = document.getElementById('step-left');
+const stepRight = document.getElementById('step-right');
 
 function setStepSliderValue(value) {
     stepSlider.value = value.toString();
@@ -83,19 +144,20 @@ function unhighlightSteps(_steps) {
 }
 
 function unhighlightAllSteps() {
-    while (stepHighlightContainer.firstChild) {
-        stepHighlightContainer.removeChild(stepHighlightContainer.firstChild);
-    }
+    const highlights = stepHighlightContainer.querySelectorAll('.step-highlight');
+    highlights.forEach(highlight => {
+        stepHighlightContainer.removeChild(highlight);
+    });
 }
 
 // TODO: would be more robust and elegant to use a recursive function to format each variable e.g. consider nested arrays, maps, and sets
 // TODO: handles e.g. hash map with tuples as keys, which is allowed in Python but not in JavaScript?
 // TODO: distinguish between int and float?
-// TODO: Infinity -> eg ∞
+// TODO: Infinity -> eg ∞ / \u221E
 function formatCallStack(call_stack) {
     let formatted = [];
     for (let depth = 0; depth < call_stack.length; depth++) {
-        const call_stack_layer = call_stack[depth];
+        const [_function, call_stack_layer] = call_stack[depth];
         for (let [name, [type, value]] of call_stack_layer) {
             switch (type) {
                 case 'array':
@@ -109,10 +171,10 @@ function formatCallStack(call_stack) {
                     break;
             }
             // let formattedKey = name.replace(/-\d+$/, '');
-            formatted.push(`depth ${depth} | ${name} : ${type} = ${value}`);
+            formatted.push(`${_function} ${depth} | ${name} : ${type} = ${value}`);
         }
     }
-    return formatted.join('<br>');
+    return '<br><br><br>&nbsp;&nbsp;&nbsp;' + formatted.join('<br>&nbsp;&nbsp;&nbsp;'); // TODO: better padding formatting
 }
 
 let currentTimeout = null;
@@ -146,7 +208,22 @@ stepSlider.addEventListener('mouseup', () => {
     }
 });
 
-const visualContent = document.getElementById('visual'); // TODO
+stepLeft.addEventListener('click', () => {
+    setStepSliderValue(Math.max(0, getStepSliderValue() - 1));
+    processStep(getStepSliderValue());
+});
+
+stepRight.addEventListener('click', () => {
+    setStepSliderValue(Math.min(getStepSliderMax(), getStepSliderValue() + 1));
+    processStep(getStepSliderValue());
+});
+
+const dataStructures = document.getElementById('data-structures'); // TODO
+// const primitives = document.getElementById('primitives');
+// const stepThrough = document.getElementById('step-through');
+const editorLine = document.getElementById('editor-line');
+const editorLineLineno = document.getElementById('editor-line-lineno');
+const editorLineLine = document.getElementById('editor-line-line');
 const terminal = document.getElementById('terminal');
 
 let mouseListener;
@@ -155,14 +232,19 @@ let editor;
 function reset() {
     stopPlaying = true;
     // stepSlider.removeEventListener('input', stepSliderEventListenerFunction);
-    stepSlider.style.visibility = 'hidden';
+    setStepSliderMax(10);
+    setStepSliderValue(5);
+    stepSlider.setAttribute('disabled', '');
+    stepLeft.setAttribute('disabled', '');
+    stepRight.setAttribute('disabled', '');
+    // if (mouseListener)
     mouseListener.dispose();
     // unhighlightLines(); // TODO: this instead of below
     if (window.currentHighlightDecoration) {
         editor.deltaDecorations(window.currentHighlightDecoration, []);
         window.currentHighlightDecoration = null;
     }
-    visualContent.innerHTML = '';
+    dataStructures.innerHTML = '';
     terminal.innerText = '';
     stopPlaying = true;
     unhighlightAllSteps();
@@ -170,9 +252,13 @@ function reset() {
     setPlayButtonState(playButtonState.Build);
 }
 
+// let linenos;
+// let lines;
+
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
-const sampleCode = await (await fetch('./samples/sample2.py')).text();
-require.config({ paths: { 'vs': 'https://unpkg.com/monaco-editor/min/vs' } });
+let editorLineEditor;
+const sampleCode = await (await fetch('./samples/sample4.py')).text();
+require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
 require(['vs/editor/editor.main'], () => {
     editor = monaco.editor.create(document.getElementById('editor'), {
         value: sampleCode,
@@ -197,7 +283,38 @@ require(['vs/editor/editor.main'], () => {
     editor.getModel().onDidChangeContent((e) => {
         // TODO: ask the user for confirmation to reset, "don't tell me again"
         // console.log('Editor code changed');
-        reset();
+        if (getPlayButtonState() !== playButtonState.Build) {
+            reset();
+        }
+    });
+
+    // TODO: switch between .children array or nth-child selection if needed
+    // TODO: does scrolling remove the earlier lines?
+    // linenos = document.querySelector("#editor div.margin-view-overlays").children;
+    // lineOverlays = document.querySelector("#editor div.view-overlays")
+    // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text").children; 
+    // console.log('linenos:', linenos, 'lines:', lines); // DEBUG
+
+
+    editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
+        value: '',
+        lineNumbers: _ => 0,
+        readOnly: true,
+        renderLineHighlight: 'none',
+        language: 'python',
+        theme: 'vs-dark',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        stickyScroll: { enabled: false},
+        scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
+        overviewRulerBorder: false,
+        overviewRulerLanes: 0,
+        folding: false,
+        lineNumbersMinChars: 3,
+
+        // cursorStyle: 'line', // Set cursor style to 'line' (or 'block', 'underline', etc.)
+        // cursorBlinking: 'hidden', // Hide the cursor
+        // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
     });
 });
 
@@ -211,14 +328,18 @@ function build() {
     pyodide.globals.set('code', editor.getValue());
     pyodide.runPython(buildCode);
     steps = pyodide.globals.get('steps').toJs(), linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
-    // console.log('steps', steps, 'linenoToSteps', linenoToSteps); // DEBUG
+    // console.log('steps', steps); // DEBUG
+    // print('linenoToSteps', linenoToSteps); // DEBUG
 }
 
 function setup() {
+    // stepSlider.addEventListener('input', stepSliderEventListenerFunction);
     setStepSliderValue(getStepSliderMin());
     setStepSliderMax(steps.length - 1);
-    // stepSlider.addEventListener('input', stepSliderEventListenerFunction);
-    stepSlider.style.visibility = 'visible';
+    stepSlider.removeAttribute('disabled');
+    stepLeft.removeAttribute('disabled');
+    stepRight.removeAttribute('disabled');
+    processStep(getStepSliderValue());
     mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
         if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
             // TODO: Disable the line from being selected
@@ -240,14 +361,153 @@ function setup() {
     setPlayButtonState(playButtonState.Play);
 }
 
+
+
+
+
+// function unmirrorPreviousLine() {
+//     const appendedLineno = linenos.querySelector(':scope > .appended-lineno:nth-last-child(1)');
+//     if (appendedLineno) {
+//         linenos.removeChild(appendedLineno);
+//     }
+//     const appendedLine = lines.querySelector(':scope > .appended-line:nth-last-child(1)');
+//     if (appendedLine) {
+//         lines.removeChild(appendedLine);
+//     }
+// }
+
+// TODO: make a lot more efficient e.g. cache impactful styles
+
+// const propertiesToCopy = [
+    
+// ]
+
+// const propertiesToNotCopy = new Set([
+//     'inset-block',
+//     'inset-inline',
+//     'inset-block-start',
+//     'inset-block-end',
+//     'inset-inline-start',
+//     'inset-inline-end',
+//     'top',
+//     'right',
+//     'bottom',
+//     'left'
+// ]);
+
+// function copyComputedStyle(from, to) {
+//     const fromComputedStyle = window.getComputedStyle(from);
+//     for (const property of fromComputedStyle) {
+//         // console.log('property:', property); // DEBUG
+//         if (propertiesToNotCopy.has(property)) {
+//             continue;
+//         }
+//         to.style[property] = fromComputedStyle.getPropertyValue(property);
+//     }
+// }
+
+// function copyComputedStylesRecursively(from, to) {
+//     copyComputedStyle(from, to);
+//     const fromChildren = from.children;
+//     const toChildren = to.children;
+//     for (let i = 0; i < fromChildren.length; i++) {
+//         copyComputedStylesRecursively(fromChildren[i], toChildren[i]);
+//     }
+// }
+
+function mirrorLine(lineno) {
+    // console.time('mirrorLine');
+
+    // const clonedLineno = linenos[lineno - 1].cloneNode(true);
+    // copyComputedStylesRecursively(linenos[lineno - 1], clonedLineno);
+    // clonedLineno.style.top = 'initial';
+    // editorLineLineno.innerHTML = clonedLineno.outerHTML;
+
+    // const clonedLine = lines[lineno - 1].cloneNode(true);
+    // copyComputedStylesRecursively(lines[lineno - 1], clonedLine);
+    // clonedLine.style.top = 'initial';
+
+    // const clonedLineCode = clonedLine.firstChild;
+    // let child = clonedLineCode.firstChild;
+    // const nbsp = '\u00A0'; // Unicode for non-breaking space
+
+    // while (child) {
+    //     let text = child.textContent;
+    //     let i;
+    //     for (i = 0; i < text.length && text[i] === nbsp; i++);        
+    //     if (i < text.length) {
+    //         child.textContent = text.substring(i);
+    //         break;
+    //     }
+    //     const nextSibling = child.nextSibling;
+    //     clonedLineCode.removeChild(child);
+    //     child = nextSibling;
+    // }
+
+    // // clonedLine.style.cssText += 'margin-inline: auto !important;left: 0 !important;right: 0 !important;';
+    // clonedLine.style.cssText += 'max-width: 100% !important;';
+    // clonedLineCode.style.cssText += 'margin-inline: auto !important;left: 0 !important;right: 0 !important;';
+    // editorLineLine.innerHTML = clonedLine.outerHTML;
+
+
+
+
+
+
+
+    // const linenoElement = linenos.querySelector(`:scope > :nth-child(${lineno})`);
+    // const clonedLinenoElement = linenoElement.cloneNode(true);
+    // clonedLinenoElement.classList.add('appended-lineno');
+    // clonedLinenoElement.style.position = 'absolute';
+    // clonedLinenoElement.style.left = '200px';
+    // linenos.appendChild(clonedLinenoElement);
+    // editorLineLineno.innerHTML = clonedLinenoElement.outerHTML;
+
+    // const lineElement = lines.querySelector(`:scope > :nth-child(${lineno})`);
+    // const clonedLineElement = lineElement.cloneNode(true);
+    // clonedLineElement.classList.add('appended-line');
+    // clonedLineElement.style.position = 'absolute';
+    // clonedLineElement.style.left = '200px';
+    // lines.appendChild(clonedLineElement);
+    // editorLineLine.innerHTML = clonedLineElement.outerHTML;
+
+
+    editorLineEditor.getModel().setValue(editor.getModel().getLineContent(lineno).trim())
+    editorLineEditor.updateOptions({
+        lineNumbers: _ => lineno,
+    });
+
+    // document.getElementById('editor-line').style.textAlign = 'center';
+    
+    // editorLineEditor.deltaDecorations([], [{
+    //     range: new monaco.Range(lineno, 1, lineno, 1),
+    //     options: {
+    //         isWholeLine: true,
+    //         // className: 'line-highlight',
+    //         className: 'centered-text',
+    //         // lineNumberClassName: 'line-highlight',
+    //     },
+    // }]);
+
+
+    // console.timeEnd('mirrorLine');
+}
+
+
+
+
+
+
 function processStep(step) {
     const [lineno, call_stack, node_types, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
     unhighlightLines();
     // prevent last step line highlight with `if (step < steps.length - 1)`? also prevent first step? (currently inconsistent, not highlighted after built but highlighted after going there. initialize steps with empty content for a step before all other steps?)
     highlightLine(lineno);
-    visualContent.innerHTML = /*`Variables:<br>${*/formatCallStack(call_stack)/*}`*/;
-    terminal.innerText = stdout;
+    dataStructures.innerHTML = /*`Variables:<br>${*/formatCallStack(call_stack)/*}`*/;
+    terminal.innerHTML = '<br><br><br>&nbsp;&nbsp;&nbsp;' + stdout.split('\n').join('<br>&nbsp;&nbsp;&nbsp;'); // TODO: better padding formatting
+    // unmirrorPreviousLine();
+    mirrorLine(lineno);
 }
 
 async function play() {
@@ -256,7 +516,7 @@ async function play() {
     if (/*getStepSliderValue() < getStepSliderMin() || */getStepSliderValue() >= getStepSliderMax()) {
         setStepSliderValue(getStepSliderMin());
     }
-    while (getStepSliderValue() <= getStepSliderMax()) { // TODO: simplify logic
+    while (getStepSliderValue() <= getStepSliderMax()) { // TODO: simplify logic, account for edge cases e.g. stepping left or right preventing visual update of some step
         if (stopPlaying) {
             return; // break
         }

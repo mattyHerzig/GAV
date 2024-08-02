@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "monaco-editor": "^0.50.0",
+    "pyodide": "^0.26.2"
+  }
+}

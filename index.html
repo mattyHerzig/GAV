@@ -5,37 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>General Algorithm Visualizer</title>
     <link rel="stylesheet" type="text/css" href="index.css"/>
-    <script src="https://unpkg.com/monaco-editor/min/vs/loader.js"></script>
-    <script src="https://cdn.jsdelivr.net/pyodide/dev/full/pyodide.js"></script> <!-- https://pyodide.org/en/stable/usage/downloading-and-deploying.html -->
-    <script type="module" src="./index.js"></script> <!-- async or defer if needed -->
+    <!-- <script src="https://unpkg.com/monaco-editor/min/vs/loader.js"></script> -->
+    <!-- https://pyodide.org/en/stable/usage/downloading-and-deploying.html -->
+    <!-- <script src="https://cdn.jsdelivr.net/pyodide/dev/full/pyodide.js"></script>  -->
 </head>
 <body>
-    <!-- <nav>
-        <a href="./index.html">Home</a>
-        <a href="./index.html">Interface</a>
-    </nav> -->
-    <!-- <div id="title">
-        <h1>General Algorithm Visualizer</h1>
-    </div> -->
-    <div class="button-container">
+    <div id="buttons">
+        <!-- <button id="examples-button">Examples</button> -->
         <button id="play-button">
             <img src="./assets/build.svg" class="icon">
             Build
         </button>
-    </div>
-    <div class="slider-container">
-        <input type="range" min="0" max="0" value="0" id="step-slider">
-        <div class="step-highlight-container"></div>
-    </div>
-    <span id="content">
-        <div id="editor"></div>
-        <div id="visual">
-            <!-- <h2>Visual</h2> -->
-            <div id="visual-content">
-                <canvas id="canvas"></canvas>
-            </div>
-            <div id="terminal"></div>
+        <div id="step-slider-container">
+            <button id="step-left" disabled>
+                <img src="./assets/left.svg" class="icon">
+            </button>
+            <span id="step-highlight-container">
+                <input id="step-slider" disabled type="range" min="0" max="10" value="5"> <!-- class="disabled" disabled -->
+                <!-- <span id="current-step-text">Text for the current step</span> -->
+            </span>
+            <button id="step-right" disabled>
+                <img src="./assets/right.svg" class="icon">
+            </button>
         </div>
-    </span>
+        <!-- <div id="speed-slider-container">
+            <div id="speed-container">Speed</div>
+            <input type="range" min="0" max="10" value="5" id="speed-slider">
+        </div> -->
+    </div>
+    <div id="editor"> <!-- change to editor-container if needed -->
+    </div>
+    <div id="between">
+        <div id="resize"></div>
+    </div>
+    <div id="visual">
+        <!-- <div id="visual-space"></div> -->
+        <div id="data-structures"></div>
+        <!-- <div id="primitives"></div> -->
+        <!-- <div id="step-through"></div> -->
+        <div id="editor-line">
+            <!-- <div id="editor-line-lineno"></div>
+            <div id="editor-line-line"></div> -->
+        </div>
+        <div id="terminal"></div>
+    </div>
+    <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
+    <script src="node_modules/pyodide/pyodide.js"></script>
+    <script type="module" src="index.js"></script> <!-- async or defer if needed -->
 </body>
 </html>
