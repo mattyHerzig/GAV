@@ -3,6 +3,8 @@
     --buttons-height: 1.7em;
     --resize-width: 2ch;
     --line-height: 18px;
+    --step-highlight-container-width: 15ch;
+    --step-highlight-width: calc(100% / 10);
 }
 html {
     height: 100%;
@@ -112,7 +114,7 @@ input[type="range"]:active {
     user-select: none;
 }
 #play-button {
-    min-width: 9ch;
+    min-width: 10ch;
 }
 #step-slider-container, #speed-slider-container { /* #step-hightlight-container? */
     display: flex;
@@ -124,7 +126,8 @@ input[type="range"]:active {
 }
 #step-highlight-container {
     position: relative;
-    width: 15ch;
+    width: var(--step-highlight-container-width);
+    overflow: hidden;
 }
 #speed-slider {
     width: 9ch;
@@ -198,12 +201,14 @@ input[type="range"]:active {
     /* flex: 1 1; */
 }
 .step-highlight {
+    /* top: 0; */
+    bottom: 0;
     position: absolute;
-    height: 10px;
-    width: 10px;
+    height: calc(var(--buttons-height) / 3);
+    width: var(--step-highlight-width);
     background-color: red; /* Highlight color */
-    border-radius: 50%;
     transform: translateX(-50%);
+    pointer-events: none;
     /* overflow: auto;
     z-index: 100; */
 }
@@ -243,7 +248,7 @@ input[type="range"]:active {
     white-space: nowrap;
 } */
 #terminal {
-    flex: 0.5 0.5;
+    flex: 0.5 1;
     background-color: #181818;
 }
 /* .centered-text {

@@ -86,6 +86,7 @@ def tracefunc(frame, event, arg):
             # print('name', name, file=sys.__stdout__)
             if is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
                 if is_primitive(value):
+                    cell_name = name
                     cell_depth = primitive_cell_name_to_currently_deepest_depth[name]
                 else:
                     cell_name, cell_depth = data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)]
@@ -109,7 +110,7 @@ def tracefunc(frame, event, arg):
         # print(frame.f_lineno, file=sys.__stdout__) # DEBUG
         if frame.f_lineno not in lineno_to_steps:
             lineno_to_steps[frame.f_lineno] = []
-        lineno_to_steps[frame.f_lineno].append(depth) # last value of depth is persistent # alternatively, `len(steps) - 1`
+        lineno_to_steps[frame.f_lineno].append(len(steps) - 1) # alternatively, last value of depth is persistent? doesn't work... maybe because depth is used in functions? idk
     
     return tracefunc
 

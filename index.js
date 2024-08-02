@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resize(e) {
         const clientXPercentage = ((e.clientX - xOffset) / window.innerWidth) * 100;
-        editor.style.width = `${clientXPercentage}vw`;
+        document.documentElement.style.setProperty('--editor-width', `${clientXPercentage}vw`);
         // updateButtonsPosition();
     }
 
@@ -128,8 +128,8 @@ function highlightSteps(_steps) {
     _steps.forEach(step => {
         const stepHighlight = document.createElement('div');
         stepHighlight.classList.add('step-highlight');
-        stepHighlight.setAttribute('step', step);
-        const position = (step - getStepSliderMin()) / (getStepSliderMax() - getStepSliderMin()) * 100;
+        stepHighlight.setAttribute('data-step', step);
+        const position = (step - getStepSliderMin() + 1) / (getStepSliderMax() - getStepSliderMin() + 1) * 100;
         stepHighlight.style.left = `${position}%`; // TODO: visible slider position doesn't go to the edges and therefore doesn't exactly match up with the highlight position
         stepHighlightContainer.appendChild(stepHighlight);
     });
@@ -137,7 +137,7 @@ function highlightSteps(_steps) {
 
 function unhighlightSteps(_steps) {
     _steps.forEach(step => {
-        const highlights = stepHighlightContainer.querySelectorAll(`.step-highlight[step="${step}"]`);
+        const highlights = stepHighlightContainer.querySelectorAll(`.step-highlight[data-step="${step}"]`);
         highlights.forEach(highlight => {
             stepHighlightContainer.removeChild(highlight);
         });
@@ -262,7 +262,7 @@ function reset() {
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
 let editorLineEditor;
-const sampleCode = await (await fetch('./samples/sample3.py')).text();
+const sampleCode = await (await fetch('./samples/sample4.py')).text();
 require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
 require(['vs/editor/editor.main'], () => {
     editor = monaco.editor.create(document.getElementById('editor'), {
@@ -332,9 +332,10 @@ function build() {
     // TODO: For now, we can ignore nontrivial formatting (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
     pyodide.globals.set('code', editor.getValue());
     pyodide.runPython(buildCode);
-    steps = pyodide.globals.get('steps').toJs(), linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
+    steps = pyodide.globals.get('steps').toJs();
+    linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
     // console.log('steps', steps); // DEBUG
-    // print('linenoToSteps', linenoToSteps); // DEBUG
+    // console.log('linenoToSteps', linenoToSteps); // DEBUG
 }
 
 function setup() {
@@ -344,13 +345,15 @@ function setup() {
     stepSlider.removeAttribute('disabled');
     stepLeft.removeAttribute('disabled');
     stepRight.removeAttribute('disabled');
+    document.documentElement.style.setProperty('--step-highlight-width', `${100 / (getStepSliderMax() - getStepSliderMin() + 1)}%`); // TODO: am i tripping, or are these different widths
     processStep(getStepSliderValue());
     mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
         if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
             // TODO: Disable the line from being selected
             const lineno = e.target.position.lineNumber;
             // console.log('typeof lineno:', typeof lineno, 'lineno:', lineno, 'e:', e);
-            const _steps = linenoToSteps.get(lineno);
+            // if (!linenoToSteps.has(lineno)) { return; }
+            const _steps = linenoToSteps.get(lineno) || [];
             // console.log('Line number clicked:', lineno);
             // console.log('linenoToSteps', linenoToSteps);
             // console.log('_steps:', _steps);
@@ -543,7 +546,7 @@ function pause() {
 let highlightDecorationIds = [];
 
 function highlightLine(lineno) {
-    window.currentHighlightDecoration = editor.deltaDecorations(highlightDecorationIds, [{
+    highlightDecorationIds = editor.deltaDecorations(highlightDecorationIds, [{
         range: new monaco.Range(lineno, 1, lineno, 1),
         options: {
             isWholeLine: true,
@@ -554,9 +557,9 @@ function highlightLine(lineno) {
 }
 
 function unhighlightLines() {
-    if (window.currentHighlightDecoration) {
-        editor.deltaDecorations(window.currentHighlightDecoration, []);
-        window.currentHighlightDecoration = null;
+    if (highlightDecorationIds) {
+        editor.deltaDecorations(highlightDecorationIds, []);
+        highlightDecorationIds = [];
     }
 }
 

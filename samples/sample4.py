@@ -3,20 +3,15 @@ def max_subarray_sum(arr):
     current_sum = 0
 
     def kadane_recursive(start):
-        # print(max_sum, current_sum)
         nonlocal max_sum, current_sum
+        # print(f'start = {start}, arr[start] = {arr[start]}')
+        print('max_sum', max_sum, 'current_sum', current_sum)
 
-        # or arr[start] in ('test', 'blah')
         if start == len(arr): 
             return max_sum
 
         current_sum = max(arr[start], current_sum + arr[start])
         max_sum = max(max_sum, current_sum)
-
-        # if start == 0:
-        #     arr.append('test')
-        # elif start == len(arr) - 1:
-        #     arr = ['blah']
 
         return kadane_recursive(start + 1)
 
