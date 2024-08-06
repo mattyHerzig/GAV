@@ -13,6 +13,8 @@ def max_subarray_sum(arr):
         current_sum = max(arr[start], current_sum + arr[start])
         max_sum = max(max_sum, current_sum)
 
+        print(f'let\'s try the next element, {arr[start + 1]}!') # IndexError
+
         return kadane_recursive(start + 1)
 
     return kadane_recursive(0)

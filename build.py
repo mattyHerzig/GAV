@@ -7,6 +7,7 @@ import sys
 import ast
 import tokenize
 import io
+import traceback
 
 lines = [''] + code.split('\n') # 1-indexed
 
@@ -83,7 +84,7 @@ def tracefunc(frame, event, arg):
     for depth, (function, locals, varnames, cellvars, freevars) in enumerate(reversed(frames)):
         _locals = {}
         for name, value in locals.items():
-            # print('name', name, file=sys.__stdout__)
+            # print('name', name, file=sys.__stdout__) # DEBUG
             if is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
                 if is_primitive(value):
                     cell_name = name
@@ -114,12 +115,44 @@ def tracefunc(frame, event, arg):
     
     return tracefunc
 
+# tb = _error.__traceback__
+# print('Traceback:', tb, file=sys.__stdout__)
+
+# print('Error:', str(e), file=sys.__stdout__) # TODO: frontend visualization, and prevent extra steps for some reason
+    # tb = traceback.format_exc()
+    # tb = traceback.extract_tb(_error.__traceback__)
+    # tb = traceback.format_tb(_error.__traceback__, limit=None)
+    # print(tb)
+
+# error = f'{type(_error).__name__}: {str(_error)}'
+    # error = f'{traceback.format_exc()}\n{type(_error).__name__}: {str(_error)}'
+
+def format_traceback(tb): # TODO: simplification of the traceback. Can revert to unsimplified and rigorous if needed
+    filtered_tb_lines = []
+    tb_lines = tb.split('\n')
+    for line in tb_lines:
+        if line.startswith('  File "<exec>"'):
+            continue
+        elif line.startswith('  File "<string>", '):
+            line = line[len('  File "<string>", '):]
+            line = '  ' + line[0].upper() + line[1:]
+        if line.endswith('<module>'):
+            line = line[:-len('<module>')] + 'global'
+        filtered_tb_lines.append(line)
+    return '\n'.join(filtered_tb_lines)
+
+error, error_lineno = '', 0
 sys.stdout = io.StringIO()
 sys.settrace(tracefunc)
-try:
+try:    
     exec(code, {})
 except Exception as e:
-    print('Error:', str(e), file=sys.__stdout__) # TODO: frontend visualization, and prevent extra steps for some reason
+    sys.settrace(None) # otherwise, formatting traceback causes an error
+    error, error_lineno = format_traceback(traceback.format_exc()), traceback.extract_tb(e.__traceback__)[-1].lineno    
+    for i in range(len(steps)-1, 1, -1): # otherwise, visualizes going back up the call stack
+        if steps[i][0] == steps[i-1][0] == steps[i-2][0] == error_lineno:
+            steps = steps[:i]
+            break
 sys.settrace(None)
 sys.stdout = sys.__stdout__
 

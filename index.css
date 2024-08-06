@@ -4,7 +4,9 @@
     --resize-width: 2ch;
     --line-height: 18px;
     --step-highlight-container-width: 15ch;
-    --step-highlight-width: calc(100% / 10);
+    --step-highlight-width: max(1px, calc(100% / 10));
+    --cursor-on-linenos: default;
+    /* --step-highlight-width: 10px; */
 }
 html {
     height: 100%;
@@ -38,7 +40,7 @@ button {
     cursor: pointer;
 }
 button:hover {
-    background-color: #4d4d4d; /* if needed, find a way to dark background color instead of hard coding this */
+    background-color: #4d4d4d;
 }
 input[type="range"]:hover {
 	cursor: grab;
@@ -114,7 +116,7 @@ input[type="range"]:active {
     user-select: none;
 }
 #play-button {
-    min-width: 10ch;
+    min-width: 11ch;
 }
 #step-slider-container, #speed-slider-container { /* #step-hightlight-container? */
     display: flex;
@@ -137,6 +139,18 @@ input[type="range"]:active {
     height: 1em;
     padding-bottom: 0.1em;
     pointer-events: none;
+}
+:has(.bigger-icon) {
+    position: relative;
+}
+.bigger-icon {
+    width: 3em;
+    height: 3em;
+    pointer-events: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 #between {
     width: 0;
@@ -204,21 +218,31 @@ input[type="range"]:active {
     /* top: 0; */
     bottom: 0;
     position: absolute;
-    height: calc(var(--buttons-height) / 3);
+    height: calc(var(--buttons-height) / 4);
     width: var(--step-highlight-width);
-    background-color: red; /* Highlight color */
+    background-color: rgb(220, 220, 0); /* Highlight color */
     transform: translateX(-50%);
     pointer-events: none;
     /* overflow: auto;
     z-index: 100; */
 }
 .lineno-highlight {
-    background-color: rgba(255, 0, 0, 0.2); /* Red with transparency */
+    background-color: rgba(255, 255, 0, 0.2); /* Yellow with transparency */
     /* color: red; */
 }
 .line-highlight {
     background-color: rgba(15, 181, 236, 0.2); /* Blue with transparency */
     outline: 2px solid rgba(15, 181, 236, 0.4); /* alternatively, border */
+}
+.prev-line-highlight {
+    background-color: rgba(15, 181, 236, 0.05); 
+    outline: 2px solid rgba(15, 181, 236, 0.1); 
+    /* background-color: rgba(0, 255, 0, 0.05); 
+    outline: 2px solid rgba(0, 255, 0, 0.1);  */
+}
+.line-error {
+    background-color: rgba(240, 77, 75, 0.2); /* Red with transparency */
+    outline: 2px solid rgba(240, 77, 75, 0.4); /* alternatively, border */
 }
 [disabled] {
     cursor: not-allowed !important;
@@ -251,6 +275,9 @@ input[type="range"]:active {
     flex: 0.5 1;
     background-color: #181818;
 }
+.terminal-error {
+    color: #f04d4b;
+}
 /* .centered-text {
     text-align: center;
     margin-inline: auto;
@@ -268,3 +295,12 @@ input[type="range"]:active {
     color: #000000;
     pointer-events: none;
 }
+.depressed {
+    filter: brightness(0.8);
+}
+.cursor-pointer {
+    cursor: pointer !important;
+}
+/* div.line-numbers {
+    cursor: var(--cursor-on-linenos) !important;
+} */

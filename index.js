@@ -61,6 +61,7 @@ const playButton = document.getElementById('play-button');
 
 const playButtonState = Object.freeze({
     Build: 'Build',
+    Building: 'Building',
     Play: 'Play',
     Pause: 'Pause',
 });
@@ -91,6 +92,11 @@ function setPlayButtonState(newPlayButtonState) {
     playButton.innerHTML = '';
     playButton.appendChild(NameToImage.get(newPlayButtonState));
     playButton.appendChild(document.createTextNode(newPlayButtonState));
+    if (newPlayButtonState.toLowerCase() === 'pause') {
+        playButton.classList.add('depressed');
+    } else {
+        playButton.classList.remove('depressed');
+    }
 }
 
 const stepSlider = document.getElementById('step-slider');
@@ -130,7 +136,7 @@ function highlightSteps(_steps) {
         stepHighlight.classList.add('step-highlight');
         stepHighlight.setAttribute('data-step', step);
         const position = (step - getStepSliderMin() + 1) / (getStepSliderMax() - getStepSliderMin() + 1) * 100;
-        stepHighlight.style.left = `${position}%`; // TODO: visible slider position doesn't go to the edges and therefore doesn't exactly match up with the highlight position
+        stepHighlight.style.left = `${position}%`;
         stepHighlightContainer.appendChild(stepHighlight);
     });
 }
@@ -176,11 +182,17 @@ function formatCallStack(call_stack) {
             // formatted.push(`${_function} ${depth} | ${name}` + (type === 'free' ? '^' : `: ${type} = ${value}`)); // DEBUG
         }
     }
-    return '<br><br><br>&nbsp;&nbsp;&nbsp;' + formatted.join('<br>&nbsp;&nbsp;&nbsp;'); // TODO: better padding formatting
+    return '\n\n\n\u00A0\u00A0\u00A0' + formatted.join('\n\u00A0\u00A0\u00A0'); // TODO: better padding formatting
 }
 
+let wait = 300;
+
+const speedSlider = document.getElementById('speed-slider');
+speedSlider.addEventListener('input', () => {
+    wait = 100 * (7 - parseInt(speedSlider.value));
+});
+
 let currentTimeout = null;
-const speed = 300; // TODO: configurable speed
 let initialPlayButtonState;
 
 let stopPlaying;
@@ -230,6 +242,7 @@ const editorLine = document.getElementById('editor-line');
 const editorLineLineno = document.getElementById('editor-line-lineno');
 const editorLineLine = document.getElementById('editor-line-line');
 const terminal = document.getElementById('terminal');
+// const terminalError = document.getElementById('terminal-error');
 
 let mouseListener;
 let editor;
@@ -239,16 +252,14 @@ function reset() {
     // stepSlider.removeEventListener('input', stepSliderEventListenerFunction);
     setStepSliderMax(10);
     setStepSliderValue(5);
+    stepCounter.innerText = `?/?`;
     stepSlider.setAttribute('disabled', '');
     stepLeft.setAttribute('disabled', '');
     stepRight.setAttribute('disabled', '');
-    // if (mouseListener)
+    // linenos.classList.remove('linenos');
+    // document.documentElement.style.setProperty('--cursor-on-linenos', 'default');
     mouseListener.dispose();
-    // unhighlightLines(); // TODO: this instead of below
-    if (window.currentHighlightDecoration) {
-        editor.deltaDecorations(window.currentHighlightDecoration, []);
-        window.currentHighlightDecoration = null;
-    }
+    unhighlightLines();
     dataStructures.innerHTML = '';
     terminal.innerText = '';
     stopPlaying = true;
@@ -257,14 +268,49 @@ function reset() {
     setPlayButtonState(playButtonState.Build);
 }
 
-// let linenos;
+let sampleCode;
+let buildCode;
+let pyodide;
+
+let resolveSampleCodePromise;
+let sampleCodePromise = new Promise((resolve) => {
+    resolveSampleCodePromise = resolve;
+});
+let resolveBuildCodePromise;
+let buildCodePromise = new Promise((resolve) => {
+    resolveBuildCodePromise = resolve;
+});
+let resolvePyodidePromise;
+let pyodidePromise = new Promise((resolve) => {
+    resolvePyodidePromise = resolve;
+});
+
+fetch('./samples/sample4.py').then(response => response.text()).then((text) => {
+    sampleCode = text;
+    resolveSampleCodePromise();
+});
+fetch('./build.py').then(response => response.text()).then((text) => {
+    buildCode = text;
+    resolveBuildCodePromise();
+});
+loadPyodide().then((loadedPyodide) => {
+    pyodide = loadedPyodide;
+    resolvePyodidePromise();
+});
+
+// console.time('promises');
+await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute where needed
+// console.timeEnd('promises');
+
+let linenos;
 // let lines;
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
 let editorLineEditor;
-const sampleCode = await (await fetch('./samples/sample4.py')).text();
+let editorLoading = document.getElementById('editor-loading');
 require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
 require(['vs/editor/editor.main'], () => {
+    // console.time('editor');
     editor = monaco.editor.create(document.getElementById('editor'), {
         value: sampleCode,
         language: 'python',
@@ -284,7 +330,10 @@ require(['vs/editor/editor.main'], () => {
         // mouseWheelZoom: true,
         // renderLineHighlight: 'none',
         // automaticLayout: true,
+        selectOnLineNumbers: false,
     });
+    editorLoading.remove();
+    // console.timeEnd('editor');
     editor.getModel().onDidChangeContent((e) => {
         // TODO: ask the user for confirmation to reset, "don't tell me again"
         // console.log('Editor code changed');
@@ -295,15 +344,15 @@ require(['vs/editor/editor.main'], () => {
 
     // TODO: switch between .children array or nth-child selection if needed
     // TODO: does scrolling remove the earlier lines?
-    // linenos = document.querySelector("#editor div.margin-view-overlays").children;
-    // lineOverlays = document.querySelector("#editor div.view-overlays")
-    // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text").children; 
+    linenos = document.querySelector("#editor div.margin-view-overlays"); // .children
+    // lineOverlays = document.querySelector("#editor div.view-overlays"); // .children
+    // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text"); // .children
     // console.log('linenos:', linenos, 'lines:', lines); // DEBUG
 
 
     editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
         value: '',
-        lineNumbers: _ => 0,
+        lineNumbers: () => 0,
         readOnly: true,
         renderLineHighlight: 'none',
         language: 'python',
@@ -323,19 +372,28 @@ require(['vs/editor/editor.main'], () => {
     });
 });
 
-const pyodide = await loadPyodide();
-const buildCode = await (await fetch('./build.py')).text();
+let steps, linenoToSteps, error, errorLineno;
 
-let steps, linenoToSteps;
-
-function build() {
+async function build() {
+    setPlayButtonState(playButtonState.Building);
+    await pyodidePromise;
     // TODO: For now, we can ignore nontrivial formatting (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
     pyodide.globals.set('code', editor.getValue());
-    pyodide.runPython(buildCode);
+    try {
+        await pyodide.runPythonAsync(buildCode); // processes e.g. play button state change, unlike pyodide.runPython(buildCode);. If better (e.g. even less latency), can go back to using a web worker
+    } catch(error) {
+        console.error(error);
+        setPlayButtonState(playButtonState.Build);
+        return;
+    }
     steps = pyodide.globals.get('steps').toJs();
     linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
-    // console.log('steps', steps); // DEBUG
-    // console.log('linenoToSteps', linenoToSteps); // DEBUG
+    error = pyodide.globals.get('error');
+    errorLineno = pyodide.globals.get('error_lineno');
+    // console.log('steps:', steps); // DEBUG
+    // console.log('linenoToSteps:', linenoToSteps); // DEBUG
+    // console.log('error:', error); // DEBUG
+    // highlightLineno(1, 'linenos'); // DEBUG
 }
 
 function setup() {
@@ -345,8 +403,12 @@ function setup() {
     stepSlider.removeAttribute('disabled');
     stepLeft.removeAttribute('disabled');
     stepRight.removeAttribute('disabled');
-    document.documentElement.style.setProperty('--step-highlight-width', `${100 / (getStepSliderMax() - getStepSliderMin() + 1)}%`); // TODO: am i tripping, or are these different widths
+    document.documentElement.style.setProperty('--step-highlight-width', `max(1px, 100% / ${getStepSliderMax() - getStepSliderMin() + 1})`); // TODO: am i tripping, or are these different widths
+    // document.documentElement.style.setProperty('--step-highlight-width', `10px`); // TODO: am i tripping, or are these different widths
     processStep(getStepSliderValue());
+    // linenos.classList.add('linenos');
+    // document.documentElement.style.setProperty('--cursor-on-linenos', 'pointer');
+    highlightAllLineno('cursor-pointer');
     mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
         if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
             // TODO: Disable the line from being selected
@@ -357,15 +419,18 @@ function setup() {
             // console.log('Line number clicked:', lineno);
             // console.log('linenoToSteps', linenoToSteps);
             // console.log('_steps:', _steps);
-            if (!linenoIsHighlighted(lineno)) { // I'm assuming that lineno and steps are one-to-one, so we don't have to also have a lineno attribute for step-highlights
-                highlightLineno(lineno);
+            if (!linenoIsHighlighted(lineno, 'lineno-highlight')) { // I'm assuming that lineno and steps are one-to-one, so we don't have to also have a lineno attribute for step-highlights
+                highlightLineno(lineno, 'lineno-highlight');
                 highlightSteps(_steps);
             } else {
-                unhighlightLineno(lineno);
+                unhighlightLineno(lineno, 'lineno-highlight');
                 unhighlightSteps(_steps);
             }
         }
     });
+    if (errorLineno > 0) {
+        highlightLine(errorLineno, 'line-error');
+    }
     setPlayButtonState(playButtonState.Play);
 }
 
@@ -482,7 +547,7 @@ function mirrorLine(lineno) {
 
     editorLineEditor.getModel().setValue(editor.getModel().getLineContent(lineno).trim())
     editorLineEditor.updateOptions({
-        lineNumbers: _ => lineno,
+        lineNumbers: () => lineno,
     });
 
     // document.getElementById('editor-line').style.textAlign = 'center';
@@ -501,20 +566,31 @@ function mirrorLine(lineno) {
     // console.timeEnd('mirrorLine');
 }
 
-function processStep(step) {
+function processStep(step) { // TODO: can replace spaces with non-breaking spaces earlier. and, with variables
     const [lineno, call_stack, node_types, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
-    unhighlightLines();
-    // prevent last step line highlight with `if (step < steps.length - 1)`? also prevent first step? (currently inconsistent, not highlighted after built but highlighted after going there. initialize steps with empty content for a step before all other steps?)
-    highlightLine(lineno);
-    dataStructures.innerHTML = /*`Variables:<br>${*/formatCallStack(call_stack)/*}`*/;
-    terminal.innerHTML = '<br><br><br>&nbsp;&nbsp;&nbsp;' + stdout.split('\n').join('<br>&nbsp;&nbsp;&nbsp;'); // TODO: better padding formatting
+    dataStructures.innerText = formatCallStack(call_stack);
+    terminal.innerText = `\n\n\n\u00A0\u00A0\u00A0${stdout.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`; // TODO: better padding formatting
+    unhighlightLines('line-highlight');
+    unhighlightLines('prev-line-highlight');
+    if (step == getStepSliderMax() && errorLineno > 0) { // TODO: red
+        const terminalError = document.createElement('span');
+        terminalError.classList.add('terminal-error');
+        terminalError.innerText = `\n\u00A0\u00A0\u00A0${error.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`;
+        terminal.appendChild(terminalError);
+    } else {
+        // prevent last step line highlight with `if (step < steps.length - 1)`? also prevent first step? (currently inconsistent, not highlighted after built but highlighted after going there. initialize steps with empty content for a step before all other steps?)
+        highlightLine(lineno, 'line-highlight');
+        if (step > 1) {
+            highlightLine(steps[step - 1][0], 'prev-line-highlight');
+        }
+    }
     // unmirrorPreviousLine();
     mirrorLine(lineno);
     stepCounter.innerText = `${step}/${getStepSliderMax()}`;
 }
 
-async function play() {
+async function play() { // TODO: make work by stepping right, for better encapsulation?
     stopPlaying = false;
     setPlayButtonState(playButtonState.Pause);
     if (/*getStepSliderValue() < getStepSliderMin() || */getStepSliderValue() >= getStepSliderMax()) {
@@ -529,7 +605,7 @@ async function play() {
             setPlayButtonState(playButtonState.Play);
             return; // break
         }
-        currentTimeout = new Promise(resolve => setTimeout(resolve, speed));
+        currentTimeout = new Promise(resolve => setTimeout(resolve, wait));
         await currentTimeout;
         if (stopPlaying) {
             return; // break
@@ -543,23 +619,33 @@ function pause() {
     setPlayButtonState(playButtonState.Play);
 }
 
-let highlightDecorationIds = [];
+let highlightDecorationIds = new Map();
 
-function highlightLine(lineno) {
-    highlightDecorationIds = editor.deltaDecorations(highlightDecorationIds, [{
+function highlightLine(lineno, className) {
+    const currentDecorations = highlightDecorationIds.get(className) || [];
+    const newDecorations = editor.deltaDecorations(currentDecorations, [{
         range: new monaco.Range(lineno, 1, lineno, 1),
         options: {
             isWholeLine: true,
-            className: 'line-highlight',
+            className: className,
             // lineNumberClassName: 'line-highlight',
         },
     }]);
+    highlightDecorationIds.set(className, newDecorations);
 }
 
-function unhighlightLines() {
-    if (highlightDecorationIds) {
-        editor.deltaDecorations(highlightDecorationIds, []);
-        highlightDecorationIds = [];
+function unhighlightLines(className) {
+    if (className) {
+        const decorationsToRemove = highlightDecorationIds.get(className);
+        if (decorationsToRemove) {
+            editor.deltaDecorations(decorationsToRemove, []);
+            highlightDecorationIds.delete(className);
+        }
+    } else {
+        highlightDecorationIds.forEach(decorations => {
+            editor.deltaDecorations(decorations, []);
+        });
+        highlightDecorationIds.clear();
     }
 }
 
@@ -589,39 +675,68 @@ function unhighlightLines() {
 
 let linenoToDecorationIds = new Map();
 
-function highlightLineno(lineno) {
-    const currentDecorations = linenoToDecorationIds.get(lineno) || [];
-    const newDecorations = editor.deltaDecorations(currentDecorations, [{
+function highlightLineno(lineno, lineNumberClassName) {
+    const currentDecorations = linenoToDecorationIds.get(lineNumberClassName) || new Map();
+    const currentDecorationIds = currentDecorations.get(lineno) || [];
+    const newDecorations = editor.deltaDecorations(currentDecorationIds, [{
         range: new monaco.Range(lineno, 1, lineno, 1),
-        options: { lineNumberClassName: 'lineno-highlight' }
+        options: { lineNumberClassName: lineNumberClassName }
     }]);
-    linenoToDecorationIds.set(lineno, newDecorations);
+    currentDecorations.set(lineno, newDecorations);
+    linenoToDecorationIds.set(lineNumberClassName, currentDecorations);
 }
 
-function unhighlightLineno(lineno) {
-    const decorationsToRemove = linenoToDecorationIds.get(lineno);
-    if (decorationsToRemove) {
-        editor.deltaDecorations(decorationsToRemove, []);
-        linenoToDecorationIds.delete(lineno);
+function highlightAllLineno(lineNumberClassName) {
+    const lineCount = editor.getModel().getLineCount();
+    for (let lineno = 1; lineno <= lineCount; lineno++) {
+        highlightLineno(lineno, lineNumberClassName);
+    }
+}
+
+function unhighlightLineno(lineno, lineNumberClassName) {
+    if (lineNumberClassName) {
+        const decorationsToRemove = linenoToDecorationIds.get(lineNumberClassName)?.get(lineno);
+        if (decorationsToRemove) {
+            editor.deltaDecorations(decorationsToRemove, []);
+            linenoToDecorationIds.get(lineNumberClassName)?.delete(lineno);
+        }
+    } else {
+        linenoToDecorationIds.forEach((decorations, className) => {
+            const decorationsToRemove = decorations.get(lineno);
+            if (decorationsToRemove) {
+                editor.deltaDecorations(decorationsToRemove, []);
+                decorations.delete(lineno);
+            }
+        });
     }
 }
 
 function unhighlightAllLineno() {
     linenoToDecorationIds.forEach(decorations => {
-        editor.deltaDecorations(decorations, []);
+        decorations.forEach(decorationIds => {
+            editor.deltaDecorations(decorationIds, []);
+        });
+        decorations.clear();
     });
     linenoToDecorationIds.clear();
 }
 
-function linenoIsHighlighted(lineno) {
-    return linenoToDecorationIds.has(lineno);
+function linenoIsHighlighted(lineno, lineNumberClassName) {
+    if (lineNumberClassName) {
+        return linenoToDecorationIds.get(lineNumberClassName)?.has(lineno);
+    } else {
+        return linenoToDecorationIds.size > 0;
+    }
 }
 
-playButton.addEventListener('click', () => {
+// TODO: handle issues with it being async?
+playButton.addEventListener('click', async () => {
     switch (getPlayButtonState()) {
         case playButtonState.Build:
-            build();
+            await build();
             setup();
+            break;
+        case playButtonState.Building: // TODO
             break;
         case playButtonState.Play:
             play();
