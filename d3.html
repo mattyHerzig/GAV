@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&display=swap" rel="stylesheet">
+</head>
 <style>
 
 .links line {
@@ -13,7 +18,7 @@
 }
 
 text {
-  font-family: sans-serif;
+  font-family: "Inconsolata", monospace;
   font-size: 10px;
 }
 
@@ -21,69 +26,94 @@ text {
   background-color: #343434;
 }
 
+.rect {
+  fill: steelblue;
+  border-radius: 10px;
+}
+
 </style>
-<svg class="visual" width="960" height="600"></svg>
-<script src="https://d3js.org/d3.v4.min.js"></script>
-<script>
+<body>
+  <button id="addNodeBtn">Add Node</button>
+  <button id="addListBtn">Add List</button>
+  <svg class="visual" width="960" height="600"></svg>
 
-var svg = d3.select("svg"),
-    width = +svg.attr("width"),
-    height = +svg.attr("height");
-    
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script>
 
-var color = d3.scaleOrdinal(d3.schemeCategory10);
+  var svg = d3.select("svg"),
+      width = +svg.attr("width"),
+      height = +svg.attr("height");
 
-var simulation = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody())
-    .force("center", d3.forceCenter(width / 2, height / 2));
+  var zoom = d3.zoom()
+      .scaleExtent([0.1, 10])
+      .on("zoom", zoomed);
 
-d3.json("test2.json", function(error, graph) {
-  if (error) throw error;
+  svg.call(zoom);
 
-  var link = svg.append("g")
+  var container = svg.append("g");
+
+  function zoomed() {
+    container.attr("transform", d3.event.transform);
+  }
+
+  var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+  var simulation = d3.forceSimulation()
+      .force("link", d3.forceLink().id(function(d) { return d.id; }))
+      .force("charge", d3.forceManyBody());
+
+  var nodes = [];
+  var links = [];
+
+  var link = container.append("g")
       .attr("class", "links")
-    .selectAll("line")
-    .data(graph.links)
-    .enter().append("line")
-      .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+    .selectAll("line");
 
-  var node = svg.append("g")
+  var node = container.append("g")
       .attr("class", "nodes")
-    .selectAll("g")
-    .data(graph.nodes)
-    .enter().append("g")
+    .selectAll("g");
 
-  var circles = node.append("circle")
-    .attr("r", 10)
-    .attr("fill", function(d) { return color(d.group); });
+  function updateGraph() {
+    // Update the links
+    link = link.data(links, function(d) { return d.source.id + "-" + d.target.id; });
+    link.exit().remove();
+    var linkEnter = link.enter().append("line")
+        .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+    link = linkEnter.merge(link);
 
-  // Create a drag handler and append it to the node object instead
-  var drag_handler = d3.drag()
-      .on("start", dragstarted)
-      .on("drag", dragged)
-      .on("end", dragended);
+    // Update the nodes
+    node = node.data(nodes, function(d) { return d.id; });
+    node.exit().remove();
+    var nodeEnter = node.enter().append("g")
+    var circles = nodeEnter.append("circle")
+        .attr("r", 15)
+        .attr("fill", function(d) { return color(d.group); })
+        .style("cursor", "pointer");
 
-  drag_handler(node);
-  
-  var lables = node.append("text")
-      .text(function(d) {
-        return d.id;
-      })
-      .attr('x', -3)
-      .attr('y', 3)
-      .style("fill", "white");
+    var drag_handler = d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended);
 
-  node.append("title")
-      .text(function(d) { return d.id; });
+    drag_handler(nodeEnter);
 
-  simulation
-      .nodes(graph.nodes)
-      .on("tick", ticked);
+    var labels = nodeEnter.append("text")
+        .text(function(d) { return d.id; })
+        .attr('x', 0)
+        .attr("text-anchor", "middle")
+        .attr('y', 3)
+        .style("fill", "white")
+        .style("cursor", "pointer");
 
-  simulation.force("link")
-      .links(graph.links)
-      .strength(0.1);
+    nodeEnter.append("title")
+        .text(function(d) { return d.id; });
+
+    node = nodeEnter.merge(node);
+
+    simulation.nodes(nodes).on("tick", ticked);
+    simulation.force("link").links(links).strength(0.1);
+    simulation.alpha(1).restart();
+  }
 
   function ticked() {
     link
@@ -95,25 +125,170 @@ d3.json("test2.json", function(error, graph) {
     node
         .attr("transform", function(d) {
           return "translate(" + d.x + "," + d.y + ")";
-        })
+        });
   }
-});
 
-function dragstarted(d) {
-  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-  d.fx = d.x;
-  d.fy = d.y;
-}
+  function dragstarted(d) {
+    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+    d.fx = d.x;
+    d.fy = d.y;
+  }
 
-function dragged(d) {
-  d.fx = d3.event.x;
-  d.fy = d3.event.y;
-}
+  function dragged(d) {
+    d.fx = d3.event.x;
+    d.fy = d3.event.y;
+  }
 
-function dragended(d) {
-  if (!d3.event.active) simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}
+  function dragended(d) {
+    if (!d3.event.active) simulation.alphaTarget(0);
+    d.fx = null;
+    d.fy = null;
+  }
 
-</script>
+  // Function to add a node
+  function addNode(id, group) {
+    nodes.push({id: id, group: group});
+    updateGraph();
+  }
+
+  // Function to add a link
+  function addLink(sourceId, targetId, value) {
+    links.push({source: sourceId, target: targetId, value: value});
+    updateGraph();
+  }
+
+  // Function to remove a node
+  function removeNode(id) {
+    nodes = nodes.filter(n => n.id !== id);
+    links = links.filter(l => l.source.id !== id && l.target.id !== id);
+    updateGraph();
+  }
+
+  // Function to remove a link
+  function removeLink(sourceId, targetId) {
+    links = links.filter(l => !(l.source.id === sourceId && l.target.id === targetId));
+    updateGraph();
+  }
+
+  // Example of usage
+  addNode('1', 1);
+  addNode('2', 2);
+  addNode('3', 3);
+  addLink('1', '2', 1);
+  addLink('2', '3', 1);
+
+  // Add button event listener
+  document.getElementById("addNodeBtn").addEventListener("click", function() {
+    var newNodeId = (nodes.length + 1);
+    var oldNodeId = Math.floor(Math.random() * nodes.length) + 1;
+    addNode(newNodeId, Math.floor(Math.random() * 10));
+    addLink(oldNodeId, newNodeId, 1);
+  });
+
+  // List visualization
+  var lists = [];
+
+  function addList(values, name) {
+    var listGroup = container.append("g")
+                             .attr("class", "list")
+                             .attr("transform", "translate(50, 50)");
+
+    var dragList = d3.drag()
+      .on("start", function() {
+        d3.select(this).raise().classed("active", true);
+      })
+      .on("drag", function() {
+        var dx = d3.event.dx;
+        var dy = d3.event.dy;
+        var currentTransform = d3.select(this).attr("transform");
+        var translate = currentTransform.match(/translate\((.+),(.+)\)/);
+        var x = parseFloat(translate[1]) + dx;
+        var y = parseFloat(translate[2]) + dy;
+        d3.select(this).attr("transform", "translate(" + x + "," + y + ")");
+      })
+      .on("end", function() {
+        d3.select(this).classed("active", false);
+      });
+
+    var listName = listGroup.append("text")
+                            .attr("x", 0)
+                            .attr("y", -5)
+                            .attr("fill", "white")
+                            .text(name || "List");
+
+    listGroup.call(dragList);
+
+    updateList(listGroup, values);
+
+    lists.push(listGroup);
+  }
+
+  function updateList(listGroup, listValues) {
+    var rects = listGroup.selectAll("rect")
+                         .data(listValues);
+
+    rects.exit().remove();
+
+    var rectEnter = rects.enter().append("rect")
+        .attr("x", function(d, i) { return i * 30; })
+        .attr("y", 0)
+        .attr("width", 25)
+        .attr("height", 25)
+        .attr("fill", "steelblue")
+        .style("cursor", "pointer")
+        .attr("class", "rect")
+        .attr("rx", 3);
+
+    rects = rectEnter.merge(rects);
+
+    var values = listGroup.selectAll("text.value")
+                         .data(listValues);
+    console.log(listValues);
+
+    values.exit().remove();
+
+    var valueEnter = values.enter().append("text")
+        .attr("class", "value")
+        .attr("x", function(d, i) { return i * 30 + 12.5; })
+        .attr("y", 16)
+        .attr("text-anchor", "middle")
+        .attr("fill", "white")
+        .text(function(d) { return d; })
+        .style("cursor", "pointer");
+
+    values = valueEnter.merge(values);
+    console.log(values);
+
+    var indices = listGroup.selectAll("text.index")
+                         .data(listValues);
+
+    indices.exit().remove();
+
+    var indexEnter = indices.enter().append("text")
+        .attr("class", "index")
+        .attr("x", function(d, i) { return i * 30 + 18.5; })
+        .attr("y", 35)
+        .attr("text-anchor", "end")
+        .attr("fill", "white")
+        .style("font-size", "8px")
+        .text(function(d, i) { return "[" + i + "]"; })
+        .style("cursor", "pointer");
+
+    indices = indexEnter.merge(indices);
+  }
+
+  // Add button event listener for adding lists
+  document.getElementById("addListBtn").addEventListener("click", function() {
+    var newListValues = [Math.floor(Math.random() * 100), Math.floor(Math.random() * 100), Math.floor(Math.random() * 100)];
+    changeList(0, newListValues);
+  });
+
+  function changeList(listIndex, values) {
+    updateList(lists[listIndex], values);
+  }
+
+  // Initial list
+  addList([10, 20, 30, 40, 50, 100, 1000, 10000, 3, 4, 5, 32, 345, 65], "List 1");
+
+  </script>
+</body>
