@@ -9,7 +9,7 @@ import tokenize
 import io
 import traceback
 
-lines = [''] + code.split('\n') # 1-indexed
+# lines = [''] + code.split('\n') # 1-indexed
 
 lineno_to_nodes = {}
 tree = ast.parse(code)
@@ -18,8 +18,6 @@ for node in ast.walk(tree):
         if node.lineno not in lineno_to_nodes:
             lineno_to_nodes[node.lineno] = []
         lineno_to_nodes[node.lineno].append(node) # sort based on node.col_offset later?
-# for lineno, nodes in lineno_to_nodes.items(): # DEBUG
-#     print('ast nodes at line', lineno, ':', [type(node).__name__ for node in nodes]) 
 
 lineno_to_comment = {}
 tokens = list(tokenize.tokenize(iter([code.encode('utf-8')]).__next__))
@@ -29,13 +27,8 @@ for token in tokens:
 
 # auxiliary data structures:
 
-# TODO: handle nonlocal and global variables (using AST?)
-# var_to_depth = {} # (name, value_id) : depth # handles usage of global and nonlocal variables
-# name_to_depths = {} # {name : [depth]} # TODO: later, can just do for variable names that nonlocal and global are used with
-
-# TODO: Counter, defaultdict, etc.
+# TODO: account for others e.g. Counter, defaultdict, range, etc.
 # TODO: strings are data structures, not primitive. map string to array?
-# "range": "array"?
 python_type_to_type = { # type(value).__name__ : type
     "list": "array",
     "tuple": "array",
@@ -43,7 +36,7 @@ python_type_to_type = { # type(value).__name__ : type
     "str": "string",
 }
 
-inferred_type = {} # {(name, depth) : type} # (type e.g. heap, graph representations, etc.) # TODO: remove when needed
+inferred_type = {} # {(name, depth) : type} # (type e.g. heap, graph representations, etc.) # depth or (function, depth) / f'{function} {depth}'?
 
 steps = [(1, [], [], '')] # [(lineno, call_stack, node_types, stdout)] # 1-indexed
 
@@ -62,10 +55,6 @@ def get_type(name, value, depth):
     return inferred_type.get((name, depth), python_type_to_type.get(type(value).__name__, type(value).__name__))
 
 def tracefunc(frame, event, arg):
-    # if event == 'return': print('return with line', lines[frame.f_lineno]) # DEBUG
-    
-    # print('lineno', frame.f_lineno, 'event', event, 'arg', arg, file=sys.__stdout__) # DEBUG
-
     frames = [] # [height : (function, {name : value}, varnames, cellvars, freevars)]
     current_frame = frame
     while current_frame:
@@ -74,17 +63,14 @@ def tracefunc(frame, event, arg):
         if current_frame.f_code.co_name == '<module>':
             break
         current_frame = current_frame.f_back
-    
-    # print(f'frames', frames, file=sys.__stdout__) # DEBUG
-    
+        
     primitive_cell_name_to_currently_deepest_depth = {} # {name : depth}
     data_structure_cell_id_to_name_and_currently_deepest_depth = {} # {id(value) : (name, depth)}
     call_stack = [] # [depth : (function, {name : (type, value)})] # global is 0
-    # TODO: can remove varnames if not using
+    # can remove varnames if not using
     for depth, (function, locals, varnames, cellvars, freevars) in enumerate(reversed(frames)):
         _locals = {}
         for name, value in locals.items():
-            # print('name', name, file=sys.__stdout__) # DEBUG
             if is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
                 if is_primitive(value):
                     cell_name = name
@@ -100,34 +86,20 @@ def tracefunc(frame, event, arg):
                         data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)] = (name, depth)
                 _locals[name] = (get_type(name, value, depth), value)
         call_stack.append((function, _locals))
-    
-    # print(f'call_stack', call_stack, file=sys.__stdout__) # DEBUG
-    
+        
     node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if frame.f_lineno in lineno_to_nodes and lineno_to_nodes[frame.f_lineno] else [] # temporarily just using type name for demonstration
     stdout = sys.stdout.getvalue()
     # for some reason, if `if frame.f_lineno == 0: return tracefunc` is included at the beginning, some early steps are skipped? also handle lines being called twice? Eg with different events # not (1 <= frame.f_lineno <= len(lines) + 1)
     if frame.f_lineno != 0: 
         steps.append((frame.f_lineno, call_stack, node_types, stdout)) 
-        # print(frame.f_lineno, file=sys.__stdout__) # DEBUG
         if frame.f_lineno not in lineno_to_steps:
             lineno_to_steps[frame.f_lineno] = []
-        lineno_to_steps[frame.f_lineno].append(len(steps) - 1) # alternatively, last value of depth is persistent? doesn't work... maybe because depth is used in functions? idk
+        lineno_to_steps[frame.f_lineno].append(len(steps) - 1)
     
     return tracefunc
 
-# tb = _error.__traceback__
-# print('Traceback:', tb, file=sys.__stdout__)
-
-# print('Error:', str(e), file=sys.__stdout__) # TODO: frontend visualization, and prevent extra steps for some reason
-    # tb = traceback.format_exc()
-    # tb = traceback.extract_tb(_error.__traceback__)
-    # tb = traceback.format_tb(_error.__traceback__, limit=None)
-    # print(tb)
-
-# error = f'{type(_error).__name__}: {str(_error)}'
-    # error = f'{traceback.format_exc()}\n{type(_error).__name__}: {str(_error)}'
-
-def format_traceback(tb): # TODO: simplification of the traceback. Can revert to unsimplified and rigorous if needed
+# simplification of the traceback. Can revert to unsimplified and rigorous if needed
+def format_traceback(tb):
     filtered_tb_lines = []
     tb_lines = tb.split('\n')
     for line in tb_lines:
@@ -153,10 +125,14 @@ except Exception as e:
         if steps[i][0] == steps[i-1][0] == steps[i-2][0] == error_lineno:
             steps = steps[:i]
             break
-sys.settrace(None)
-sys.stdout = sys.__stdout__
+finally:
+    sys.settrace(None)
+    sys.stdout = sys.__stdout__
 
-# TODO: format steps for JavaScript e.g. can't use tuples as keys, but no longer need value_id anyways
+# for auxiliary_data_structure in [lineno_to_nodes, lineno_to_comment, inferred_type]:
+#     auxiliary_data_structure.clear()
+
 # print("Python steps:", steps)
 
-# TODO: clear all auxiliary data structures used before returning?
+# TODO: format deliverables for JavaScript e.g. steps e.g. can't use tuples as keys (unless Pyodoide accounts for e.g. with Proxy), non-breaking spaces instead of spaces, etc.
+

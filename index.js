@@ -1,12 +1,4 @@
 
-
-
-
-
-
-// import * as monaco from 'monaco-editor';
-// import { loadPyodide } from 'pyodide';
-
 document.addEventListener('DOMContentLoaded', () => {
     // const buttons = document.getElementById('buttons');
     // const examplesButton = document.getElementById('examples-button') || document.getElementById('play-button');
@@ -49,13 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // window.addEventListener('resize', updateButtonsPosition);
     // updateButtonsPosition();
 });
-
-
-
-
-
-
-
 
 const playButton = document.getElementById('play-button');
 
@@ -108,7 +93,7 @@ function setStepSliderValue(value) {
     stepSlider.value = value.toString();
 }
 
-// function setStepSliderMin(min) { // effective minimum
+// function setStepSliderMin(min) { // effective minimum, 1
 //     stepSlider.min = (min - 1).toString();
 // }
 
@@ -120,7 +105,7 @@ function getStepSliderValue() {
     return parseInt(stepSlider.value);
 }
 
-function getStepSliderMin() { // effective minimum
+function getStepSliderMin() { // effective minimum, 1
     return parseInt(stepSlider.min) + 1;
 }
 
@@ -159,7 +144,6 @@ function unhighlightAllSteps() {
 
 // TODO: would be more robust and elegant to use a recursive function to format each variable e.g. consider nested arrays, maps, and sets
 // TODO: handles e.g. hash map with tuples as keys, which is allowed in Python but not in JavaScript?
-// TODO: distinguish between int and float?
 // TODO: Infinity -> eg ∞ / \u221E
 function formatCallStack(call_stack) {
     let formatted = [];
@@ -176,13 +160,20 @@ function formatCallStack(call_stack) {
                 case 'set':
                     value = `{${[...value].join(', ')}}`;
                     break;
+                case 'float': // TODO: account for scientific notation?
+                    value = value.toString();
+                    if (!value.includes('.')) {
+                        value += '.0';
+                    }
+                    break;
+                case 'string':
+                    value = value.replace(/ /g, '\u00A0');
+                    break;
             }
-            // let formattedKey = name.replace(/-\d+$/, '');
             formatted.push(`${_function} ${depth} | ${name} : ${type} = ${value}`);
-            // formatted.push(`${_function} ${depth} | ${name}` + (type === 'free' ? '^' : `: ${type} = ${value}`)); // DEBUG
         }
     }
-    return '\n\n\n\u00A0\u00A0\u00A0' + formatted.join('\n\u00A0\u00A0\u00A0'); // TODO: better padding formatting
+    return '\n\n\n\u00A0\u00A0\u00A0' + formatted.join('\n\u00A0\u00A0\u00A0');
 }
 
 let wait = 300;
@@ -249,15 +240,12 @@ let editor;
 
 function reset() {
     stopPlaying = true;
-    // stepSlider.removeEventListener('input', stepSliderEventListenerFunction);
     setStepSliderMax(10);
     setStepSliderValue(5);
     stepCounter.innerText = `?/?`;
     stepSlider.setAttribute('disabled', '');
     stepLeft.setAttribute('disabled', '');
     stepRight.setAttribute('disabled', '');
-    // linenos.classList.remove('linenos');
-    // document.documentElement.style.setProperty('--cursor-on-linenos', 'default');
     mouseListener.dispose();
     unhighlightLines();
     dataStructures.innerHTML = '';
@@ -265,6 +253,7 @@ function reset() {
     stopPlaying = true;
     unhighlightAllSteps();
     unhighlightAllLineno();
+    unmirrorLine();
     setPlayButtonState(playButtonState.Build);
 }
 
@@ -285,7 +274,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample4.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample7.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
@@ -302,7 +291,7 @@ loadPyodide().then((loadedPyodide) => {
 await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute where needed
 // console.timeEnd('promises');
 
-let linenos;
+// let linenos;
 // let lines;
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
@@ -323,32 +312,31 @@ require(['vs/editor/editor.main'], () => {
         overviewRulerBorder: false,
         overviewRulerLanes: 0,
         folding: false,
-        // glyphMargin: true,
         lineNumbersMinChars: 3,
+        selectOnLineNumbers: false,
+        // glyphMargin: true,
         // lineDecorationsWidth: 5,
         // fontSize: '20px',
         // mouseWheelZoom: true,
         // renderLineHighlight: 'none',
         // automaticLayout: true,
-        selectOnLineNumbers: false,
     });
     editorLoading.remove();
     // console.timeEnd('editor');
     editor.getModel().onDidChangeContent((e) => {
         // TODO: ask the user for confirmation to reset, "don't tell me again"
-        // console.log('Editor code changed');
+        unhighlightLines(); // for syntax error line highlighting
         if (getPlayButtonState() !== playButtonState.Build) {
             reset();
         }
     });
 
-    // TODO: switch between .children array or nth-child selection if needed
-    // TODO: does scrolling remove the earlier lines?
-    linenos = document.querySelector("#editor div.margin-view-overlays"); // .children
+    // switch between .children array or nth-child selection if needed
+    // scrolling removes the earlier lines...
+    // linenos = document.querySelector("#editor div.margin-view-overlays"); // .children
     // lineOverlays = document.querySelector("#editor div.view-overlays"); // .children
     // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text"); // .children
     // console.log('linenos:', linenos, 'lines:', lines); // DEBUG
-
 
     editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
         value: '',
@@ -374,46 +362,85 @@ require(['vs/editor/editor.main'], () => {
 
 let steps, linenoToSteps, error, errorLineno;
 
+function formatTraceback(tb) {
+    let filteredTbLines = ['Traceback (most recent call last):'];
+    const tbLines = tb.split('\n');
+    let afterFileUnknown = false;
+    for (let line of tbLines) {
+        if (line.startsWith('  File "<unknown>", ')) {
+            afterFileUnknown = true;
+            line = line.slice('  File "<unknown>", '.length);
+            line = '  ' + line.charAt(0).toUpperCase() + line.slice(1);
+            filteredTbLines.push(line);
+        } else if (afterFileUnknown) {
+            filteredTbLines.push(line);
+            if (line.match(/^[A-Za-z]*Error/)) {
+                break;
+            }
+        }
+    }
+    return filteredTbLines.join('\n');
+}
+
+function extractErrorLinenoFromError(error) {
+    const lines = error.split('\n');
+    for (let i = lines.length - 2; i >= 0; i--) {
+        const line = lines[i].trim();
+        const match = line.match(/Line (\d)$/);
+        if (match) {
+            return parseInt(match[1]);
+        }
+    }
+    return 0;
+}
+
 async function build() {
     setPlayButtonState(playButtonState.Building);
+    unhighlightLines();
+    terminal.innerText = '';
     await pyodidePromise;
-    // TODO: For now, we can ignore nontrivial formatting (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
+    // TODO: For now, can ignore nontrivial formatting (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
     pyodide.globals.set('code', editor.getValue());
-    try {
-        await pyodide.runPythonAsync(buildCode); // processes e.g. play button state change, unlike pyodide.runPython(buildCode);. If better (e.g. even less latency), can go back to using a web worker
-    } catch(error) {
-        console.error(error);
+    try { // TODO: can't account for some errors, e.g. SyntaxError, IndentationError, in build.py, since Pyodide elevates it to JavaScript without being able to intercept in build.py's try-catch? Catch here, keep in terminal-error until next build attempt
+        // async processes e.g. play button state change, unlike pyodide.runPython(buildCode);. If better (e.g. even less latency), can go back to using a web worker
+        await pyodide.runPythonAsync(buildCode);    
+    } catch(e) {
+        // console.log(e); // DEBUG
+        error = formatTraceback(e.toString());
+        errorLineno = extractErrorLinenoFromError(error); // Can alternatively try extractig from e, rather than parsing formatted error
+        // console.log(e, error, errorLineno); // DEBUG
+        if (errorLineno > 0) {
+            highlightLine(errorLineno, 'line-error');
+        }
+        const terminalError = document.createElement('span');
+        terminalError.classList.add('terminal-error');
+        terminalError.innerText = `\n\u00A0\u00A0\u00A0${error.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`;
+        terminal.appendChild(terminalError);
         setPlayButtonState(playButtonState.Build);
-        return;
+        return false;
     }
     steps = pyodide.globals.get('steps').toJs();
     linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
     error = pyodide.globals.get('error');
     errorLineno = pyodide.globals.get('error_lineno');
+    return true;
     // console.log('steps:', steps); // DEBUG
     // console.log('linenoToSteps:', linenoToSteps); // DEBUG
     // console.log('error:', error); // DEBUG
-    // highlightLineno(1, 'linenos'); // DEBUG
 }
 
 function setup() {
-    // stepSlider.addEventListener('input', stepSliderEventListenerFunction);
     setStepSliderValue(getStepSliderMin());
     setStepSliderMax(steps.length - 1);
     stepSlider.removeAttribute('disabled');
     stepLeft.removeAttribute('disabled');
     stepRight.removeAttribute('disabled');
     document.documentElement.style.setProperty('--step-highlight-width', `max(1px, 100% / ${getStepSliderMax() - getStepSliderMin() + 1})`); // TODO: am i tripping, or are these different widths
-    // document.documentElement.style.setProperty('--step-highlight-width', `10px`); // TODO: am i tripping, or are these different widths
     processStep(getStepSliderValue());
-    // linenos.classList.add('linenos');
-    // document.documentElement.style.setProperty('--cursor-on-linenos', 'pointer');
     highlightAllLineno('cursor-pointer');
     mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
         if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
-            // TODO: Disable the line from being selected
             const lineno = e.target.position.lineNumber;
-            // console.log('typeof lineno:', typeof lineno, 'lineno:', lineno, 'e:', e);
             // if (!linenoToSteps.has(lineno)) { return; }
             const _steps = linenoToSteps.get(lineno) || [];
             // console.log('Line number clicked:', lineno);
@@ -428,15 +455,9 @@ function setup() {
             }
         }
     });
-    if (errorLineno > 0) {
-        highlightLine(errorLineno, 'line-error');
-    }
+    terminal.innerText = '';
     setPlayButtonState(playButtonState.Play);
 }
-
-
-
-
 
 // function unmirrorPreviousLine() {
 //     const appendedLineno = linenos.querySelector(':scope > .appended-lineno:nth-last-child(1)');
@@ -527,7 +548,6 @@ function mirrorLine(lineno) {
 
 
 
-
     // const linenoElement = linenos.querySelector(`:scope > :nth-child(${lineno})`);
     // const clonedLinenoElement = linenoElement.cloneNode(true);
     // clonedLinenoElement.classList.add('appended-lineno');
@@ -566,7 +586,14 @@ function mirrorLine(lineno) {
     // console.timeEnd('mirrorLine');
 }
 
-function processStep(step) { // TODO: can replace spaces with non-breaking spaces earlier. and, with variables
+function unmirrorLine() {
+    editorLineEditor.getModel().setValue('')
+    editorLineEditor.updateOptions({
+        lineNumbers: () => 0,
+    });
+}
+
+function processStep(step) { // if needed, can replace spaces with non-breaking spaces earlier. and, with variables
     const [lineno, call_stack, node_types, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
     dataStructures.innerText = formatCallStack(call_stack);
@@ -574,12 +601,17 @@ function processStep(step) { // TODO: can replace spaces with non-breaking space
     unhighlightLines('line-highlight');
     unhighlightLines('prev-line-highlight');
     if (step == getStepSliderMax() && errorLineno > 0) { // TODO: red
+        unhighlightLines('later-line-error');
+        highlightLine(errorLineno, 'line-error');
         const terminalError = document.createElement('span');
         terminalError.classList.add('terminal-error');
         terminalError.innerText = `\n\u00A0\u00A0\u00A0${error.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`;
         terminal.appendChild(terminalError);
     } else {
-        // prevent last step line highlight with `if (step < steps.length - 1)`? also prevent first step? (currently inconsistent, not highlighted after built but highlighted after going there. initialize steps with empty content for a step before all other steps?)
+        if (errorLineno > 0) {
+            unhighlightLines('line-error');
+            highlightLine(errorLineno, 'later-line-error'); // TODO: prevent highlighting if already highlighted?
+        }
         highlightLine(lineno, 'line-highlight');
         if (step > 1) {
             highlightLine(steps[step - 1][0], 'prev-line-highlight');
@@ -649,30 +681,6 @@ function unhighlightLines(className) {
     }
 }
 
-// let highlightCollection;
-
-// function highlightLine(lineno) {
-//     highlightCollection = editor.createDecorationsCollection({
-//         options: {
-//             isWholeLine: true,
-//             className: 'line-highlight',
-//             // lineNumberClassName: 'line-highlight',
-//         },
-//         range: {
-//             endColumn: 1,
-//             endLineNumber: lineno,
-//             startColumn: 1,
-//             startLineNumber: lineno,
-//         }
-//     });
-// }
-
-// function unhighlightLines() {
-//     if (highlightCollection) {
-//         highlightCollection.clear();
-//     }
-// }
-
 let linenoToDecorationIds = new Map();
 
 function highlightLineno(lineno, lineNumberClassName) {
@@ -733,10 +741,11 @@ function linenoIsHighlighted(lineno, lineNumberClassName) {
 playButton.addEventListener('click', async () => {
     switch (getPlayButtonState()) {
         case playButtonState.Build:
-            await build();
-            setup();
+            if (await build()) {
+                setup();
+            }
             break;
-        case playButtonState.Building: // TODO
+        case playButtonState.Building: // TODO: look into making cancelable if needed
             break;
         case playButtonState.Play:
             play();

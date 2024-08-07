@@ -1,23 +1,20 @@
 :root {
-    --editor-width: 35vw; /* min(50ch, 50vw) */
+    --editor-width: 35vw;
     --buttons-height: 1.7em;
     --resize-width: 2ch;
     --line-height: 18px;
     --step-highlight-container-width: 15ch;
     --step-highlight-width: max(1px, calc(100% / 10));
     --cursor-on-linenos: default;
-    /* --step-highlight-width: 10px; */
 }
 html {
     height: 100%;
-    /* overflow-y: hidden; */
 }
 body {
     height: 100%;
     margin: 0;
     padding: 0;
     background-color: #676767;
-    /* overflow-x: hidden; */
     display: flex;
     flex-direction: row;
     flex: 1;
@@ -26,7 +23,6 @@ button, #speed-container {
     height: 100%;
     border: 0;
     padding: 1px 6px;
-    /* margin: 0; */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -54,8 +50,6 @@ input[type="range"]:active {
     height: 100%;
     width: 100%;
     margin: 0;
-    /* overflow: hidden */
-    /* outline: none; */
     overflow: hidden;
     background-color: #ffffff;
 }
@@ -64,7 +58,7 @@ input[type="range"]:active {
     appearance: none;
     width: 0px;
     /* background: red; */
-    box-shadow: -15ch 0 0 15ch rgb(15, 181, 236); /* -15ch 0 0 15ch rgb(80, 255, 80) */
+    box-shadow: -15ch 0 0 15ch rgb(15, 181, 236);
 }
 #step-slider:hover::-webkit-slider-thumb {
     box-shadow: -15ch 0 0 15ch rgb(11, 148, 194);
@@ -74,14 +68,10 @@ input[type="range"]:active {
 }
 #buttons {
     height: var(--buttons-height);
-    /* left: 25vw; */
     width: 100vw;
     max-width: fit-content;
-    /* width: auto; */
     display: flex;
     flex-direction: row;
-    /* justify-content: space-between; */
-    /* margin-top: 10px; */
     overflow-x: scroll;
     overflow-y: hidden; /* address root problem if needed */
     -ms-overflow-style: none;
@@ -93,13 +83,7 @@ input[type="range"]:active {
     left: 0; 
     right: 0; 
     margin-inline: auto;
-    /* margin-left: auto; 
-    margin-right: auto; */
-    /* margin: auto; */
-    /* margin-left: -10vw; */
-    /* margin-right: -100vw; */
     z-index: 1;
-    /* outline:rgb(0, 255, 0) solid 5px; */
 }
 /* #left-buttons, #right-buttons {
     display: flex;
@@ -109,7 +93,8 @@ input[type="range"]:active {
 } */
 /* #examples-button { */
     /* position: absolute; */
-    /* right: var(--editor-width); } */
+    /* right: var(--editor-width);
+} */
 #buttons * {
     font-size: 13px;
     color: #ffffff;
@@ -161,9 +146,7 @@ input[type="range"]:active {
     margin-left: calc(-1 * var(--resize-width) / 2);
     margin-right: calc(-1 * var(--resize-width) / 2);
     width: var(--resize-width);
-    /* overflow: visible; */
-    cursor: col-resize; /* ew-resize */
-    /* outline: 2px solid rgb(255, 0, 0); */
+    cursor: col-resize; /* alternatively, ew-resize */
     z-index: 0;
     height: 100%;
     user-select: none;
@@ -172,26 +155,7 @@ input[type="range"]:active {
     width: var(--editor-width);
     height: 100%;
     background-color: #1e1e1e; /* same color as editor, once loaded */
-    /* DEBUG */
-    /* resize: horizontal;
-    overflow: auto; */
 }
-/* ::-webkit-resizer {
-    border: 1px solid rgb(255, 0, 0);
-    outline: 15px solid rgb(0, 0, 255);
-} */
-/* #editor::after {
-    content: 'testing';
-    margin-left: calc(-1 * var(--resize-width) / 2);
-    margin-right: calc(-1 * var(--resize-width) / 2);
-    width: var(--resize-width);
-    height: calc(100% - var(--buttons-height));
-    cursor: ew-resize;
-    outline: 2px solid rgb(255, 0, 128);
-    background-color: rgb(255, 0, 128);
-    border-color: rgb(255, 0, 128);
-    z-index: 100;
-} */
 #visual {
     flex: 1 1;
     display: flex;
@@ -200,35 +164,25 @@ input[type="range"]:active {
     height: 100%;
     background-color: #343434;
     font-family: menlo;
-    /* TODO */
-    /* causing y overfill */
-    /* padding-top: calc(27.192px + 2em); */
-    /* padding-inline: 2em; */
     font-size: 13px;
     color: #ffffff;
-    /* overflow-y: hidden; overflow-x: scroll; */
     overflow: hidden;
     white-space: nowrap;
 }
 #visual > * {
     overflow: scroll;
-    /* flex: 1 1; */
 }
 .step-highlight {
-    /* top: 0; */
     bottom: 0;
     position: absolute;
     height: calc(var(--buttons-height) / 4);
     width: var(--step-highlight-width);
-    background-color: rgb(220, 220, 0); /* Highlight color */
+    background-color: rgb(220, 220, 0);
     transform: translateX(-50%);
     pointer-events: none;
-    /* overflow: auto;
-    z-index: 100; */
 }
 .lineno-highlight {
     background-color: rgba(255, 255, 0, 0.2); /* Yellow with transparency */
-    /* color: red; */
 }
 .line-highlight {
     background-color: rgba(15, 181, 236, 0.2); /* Blue with transparency */
@@ -237,12 +191,14 @@ input[type="range"]:active {
 .prev-line-highlight {
     background-color: rgba(15, 181, 236, 0.05); 
     outline: 2px solid rgba(15, 181, 236, 0.1); 
-    /* background-color: rgba(0, 255, 0, 0.05); 
-    outline: 2px solid rgba(0, 255, 0, 0.1);  */
 }
 .line-error {
     background-color: rgba(240, 77, 75, 0.2); /* Red with transparency */
     outline: 2px solid rgba(240, 77, 75, 0.4); /* alternatively, border */
+}
+.later-line-error {
+    background-color: rgba(240, 77, 75, 0.1); /* Red with transparency */
+    outline: 2px solid rgba(240, 77, 75, 0.2); /* alternatively, border */
 }
 [disabled] {
     cursor: not-allowed !important;
@@ -278,12 +234,6 @@ input[type="range"]:active {
 .terminal-error {
     color: #f04d4b;
 }
-/* .centered-text {
-    text-align: center;
-    margin-inline: auto;
-    display: flex;
-    justify-content: center;
-} */
 #step-counter {
     width: 100%;
     height: 100%;
@@ -301,6 +251,3 @@ input[type="range"]:active {
 .cursor-pointer {
     cursor: pointer !important;
 }
-/* div.line-numbers {
-    cursor: var(--cursor-on-linenos) !important;
-} */
