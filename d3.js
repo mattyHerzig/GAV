@@ -1,54 +1,4 @@
-<!DOCTYPE html>
-<meta charset="utf-8">
-<head>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&display=swap" rel="stylesheet">
-</head>
-<style>
-.links line {
-  stroke: #999;
-  stroke-opacity: 0.6;
-}
-
-.nodes circle {
-  stroke: #fff;
-  stroke-width: 1.5px;
-}
-
-text {
-  font-family: "Inconsolata", monospace;
-  font-size: 10px;
-}
-
-.visual {
-  background-color: #343434;
-}
-
-.rect {
-  fill: steelblue;
-  border-radius: 10px;
-}
-</style>
-<body>
-  <!-- <button id="addNodeBtn">Add Node</button>
-  <button id="addListBtn">Add List</button>
-  <button id="changeListBtn">Change List</button>
-  <button id="logListPositionsBtn" onclick="logListPositions()">Log List Positions</button>
-  <button id="randomizeListPositionsBtn" onclick="randomizeListPositions()">Randomize List Positions</button>
-  <button id="randomizeNodePositionsBtn" onclick="randomizeNodePositions()">Randomize Node Positions</button> 
-  <button id="logListContentsBtn" onclick="logListContents()">Log List Contents</button>
-  <button id="removeAllLinksBtn" onclick="removeAllLinks()">Remove All Links</button>
-  <button id="removeAllNodesBtn" onclick="removeAllNodes()">Remove All Nodes</button>
-  <button id="removeAllListsBtn" onclick="removeAllLists()">Remove All Lists</button>
-  <button id="randomlyAddLinksBtn" onclick="randomlyAddLinks()">Randomly Add Links</button>
-  <button id="autoZoomBtn" onclick="autoZoom()">Auto Zoom</button> -->
-  <svg class="visual" width="960" height="600"></svg>
-</body>
-
-  <script src="https://d3js.org/d3.v4.min.js"></script>
-  <script>
-  var svg = d3.select("svg"),
+var svg = d3.select("svg"),
       width = +svg.attr("width"),
       height = +svg.attr("height");
 
@@ -434,6 +384,3 @@ text {
   addLink('Conner', 'Mubashir', 1);
   addLink('Conner', 'Rebecca', 1);
   addLink('Jordan', 'Mubashir', 1);
-  
-  </script>
-</body>
