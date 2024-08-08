@@ -1,3 +1,17 @@
+// optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing)
+
+const svg = d3.select("svg");
+svg.append("text")
+   .attr("x", 50)
+   .attr("y", 50)
+   .text("HELLO WORLD");
+
+
+
+
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
     // const buttons = document.getElementById('buttons');
@@ -85,8 +99,8 @@ function setPlayButtonState(newPlayButtonState) {
 }
 
 const stepSlider = document.getElementById('step-slider');
-const stepLeft = document.getElementById('step-left');
-const stepRight = document.getElementById('step-right');
+const stepSliderLeft = document.getElementById('step-left');
+const stepSliderRight = document.getElementById('step-right');
 const stepCounter = document.getElementById('step-counter');
 
 function setStepSliderValue(value) {
@@ -160,11 +174,11 @@ function formatCallStack(call_stack) {
                 case 'set':
                     value = `{${[...value].join(', ')}}`;
                     break;
-                case 'float': // TODO: account for scientific notation?
-                    value = value.toString();
-                    if (!value.includes('.')) {
-                        value += '.0';
-                    }
+                case 'float': // TODO: account for edge cases e.g. Infinity, scientific notation?
+                    // value = value.toString();
+                    // if (!value.includes('.')) {
+                    //     value += '.0';
+                    // }
                     break;
                 case 'string':
                     value = value.replace(/ /g, '\u00A0');
@@ -216,15 +230,19 @@ stepSlider.addEventListener('mouseup', () => {
     }
 });
 
-stepLeft.addEventListener('click', () => {
+function stepLeft() {
     setStepSliderValue(Math.max(getStepSliderMin(), getStepSliderValue() - 1));
     processStep(getStepSliderValue());
-});
+}
 
-stepRight.addEventListener('click', () => {
+function stepRight() {
     setStepSliderValue(Math.min(getStepSliderMax(), getStepSliderValue() + 1));
     processStep(getStepSliderValue());
-});
+}
+
+stepSliderLeft.addEventListener('click', () => stepLeft());
+
+stepSliderRight.addEventListener('click', () => stepRight());
 
 const dataStructures = document.getElementById('data-structures'); // TODO
 // const primitives = document.getElementById('primitives');
@@ -244,8 +262,8 @@ function reset() {
     setStepSliderValue(5);
     stepCounter.innerText = `?/?`;
     stepSlider.setAttribute('disabled', '');
-    stepLeft.setAttribute('disabled', '');
-    stepRight.setAttribute('disabled', '');
+    stepSliderLeft.setAttribute('disabled', '');
+    stepSliderRight.setAttribute('disabled', '');
     mouseListener.dispose();
     unhighlightLines();
     dataStructures.innerHTML = '';
@@ -274,7 +292,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample7.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample4.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
@@ -314,6 +332,7 @@ require(['vs/editor/editor.main'], () => {
         folding: false,
         lineNumbersMinChars: 3,
         selectOnLineNumbers: false,
+        // "semanticHighlighting.enabled": true,
         // glyphMargin: true,
         // lineDecorationsWidth: 5,
         // fontSize: '20px',
@@ -374,7 +393,7 @@ function formatTraceback(tb) {
             filteredTbLines.push(line);
         } else if (afterFileUnknown) {
             filteredTbLines.push(line);
-            if (line.match(/^[A-Za-z]*Error/)) {
+            if (line.match(/^\S*Error/)) { // /^[A-Za-z]*Error/
                 break;
             }
         }
@@ -386,7 +405,7 @@ function extractErrorLinenoFromError(error) {
     const lines = error.split('\n');
     for (let i = lines.length - 2; i >= 0; i--) {
         const line = lines[i].trim();
-        const match = line.match(/Line (\d)$/);
+        const match = line.match(/Line (\d+)$/);
         if (match) {
             return parseInt(match[1]);
         }
@@ -401,7 +420,7 @@ async function build() {
     await pyodidePromise;
     // TODO: For now, can ignore nontrivial formatting (e.g. triple quotation marks, semi-colons for multiple statements on one line, or backslash for line continuation. See 6/17 screenshot for more.)
     pyodide.globals.set('code', editor.getValue());
-    try { // TODO: can't account for some errors, e.g. SyntaxError, IndentationError, in build.py, since Pyodide elevates it to JavaScript without being able to intercept in build.py's try-catch? Catch here, keep in terminal-error until next build attempt
+    try { // can't catch for some errors, e.g. SyntaxError, IndentationError, in build.py, since Pyodide elevates it to JavaScript without being able to catch in build.py's try-catch? Catch here, keep in terminal-error until next build attempt
         // async processes e.g. play button state change, unlike pyodide.runPython(buildCode);. If better (e.g. even less latency), can go back to using a web worker
         await pyodide.runPythonAsync(buildCode);    
     } catch(e) {
@@ -418,6 +437,8 @@ async function build() {
         terminal.appendChild(terminalError);
         setPlayButtonState(playButtonState.Build);
         return false;
+    } finally {
+        // await pyodide.runPythonAsync('clear_collections()'); // alternatively, can look into restarting pyodide completely e.g. https://github.com/pyodide/pyodide/issues/703
     }
     steps = pyodide.globals.get('steps').toJs();
     linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
@@ -433,8 +454,8 @@ function setup() {
     setStepSliderValue(getStepSliderMin());
     setStepSliderMax(steps.length - 1);
     stepSlider.removeAttribute('disabled');
-    stepLeft.removeAttribute('disabled');
-    stepRight.removeAttribute('disabled');
+    stepSliderLeft.removeAttribute('disabled');
+    stepSliderRight.removeAttribute('disabled');
     document.documentElement.style.setProperty('--step-highlight-width', `max(1px, 100% / ${getStepSliderMax() - getStepSliderMin() + 1})`); // TODO: am i tripping, or are these different widths
     processStep(getStepSliderValue());
     highlightAllLineno('cursor-pointer');
@@ -597,7 +618,9 @@ function processStep(step) { // if needed, can replace spaces with non-breaking 
     const [lineno, call_stack, node_types, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
     dataStructures.innerText = formatCallStack(call_stack);
-    terminal.innerText = `\n\n\n\u00A0\u00A0\u00A0${stdout.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`; // TODO: better padding formatting
+    if (stdout.length > 0) { // for consistency with compile-time errors
+    terminal.innerText = `\n\u00A0\u00A0\u00A0${stdout.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`; // TODO: better padding formatting
+    }
     unhighlightLines('line-highlight');
     unhighlightLines('prev-line-highlight');
     if (step == getStepSliderMax() && errorLineno > 0) { // TODO: red
@@ -608,6 +631,10 @@ function processStep(step) { // if needed, can replace spaces with non-breaking 
         terminalError.innerText = `\n\u00A0\u00A0\u00A0${error.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`;
         terminal.appendChild(terminalError);
     } else {
+        const terminalError = document.querySelector('.terminal-error');
+        if (terminalError) {
+            terminalError.remove();
+        }
         if (errorLineno > 0) {
             unhighlightLines('line-error');
             highlightLine(errorLineno, 'later-line-error'); // TODO: prevent highlighting if already highlighted?
@@ -620,29 +647,23 @@ function processStep(step) { // if needed, can replace spaces with non-breaking 
     // unmirrorPreviousLine();
     mirrorLine(lineno);
     stepCounter.innerText = `${step}/${getStepSliderMax()}`;
+    if (step == getStepSliderMax()) {
+        pause();
+    }
 }
 
-async function play() { // TODO: make work by stepping right, for better encapsulation?
+async function play() {
     stopPlaying = false;
     setPlayButtonState(playButtonState.Pause);
-    if (/*getStepSliderValue() < getStepSliderMin() || */getStepSliderValue() >= getStepSliderMax()) {
+    if (getStepSliderValue() == getStepSliderMax()) {
         setStepSliderValue(getStepSliderMin());
     }
-    while (getStepSliderValue() <= getStepSliderMax()) { // TODO: simplify logic, account for edge cases e.g. stepping left or right preventing visual update of some step
+    while (getStepSliderValue() < getStepSliderMax()) {
+        await new Promise(resolve => setTimeout(resolve, wait)); // TODO: sometimes it has irregular timeouts?
         if (stopPlaying) {
-            return; // break
+            break;
         }
-        processStep(getStepSliderValue());
-        if (getStepSliderValue() >= getStepSliderMax()) {
-            setPlayButtonState(playButtonState.Play);
-            return; // break
-        }
-        currentTimeout = new Promise(resolve => setTimeout(resolve, wait));
-        await currentTimeout;
-        if (stopPlaying) {
-            return; // break
-        }
-        setStepSliderValue(getStepSliderValue() + 1);
+        stepRight();
     }
 }
 

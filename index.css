@@ -204,6 +204,9 @@ input[type="range"]:active {
     cursor: not-allowed !important;
     filter: brightness(0.8);
 }
+#svg {
+    flex: 1 1;
+}
 #data-structures {
     flex: 1 1;
 }

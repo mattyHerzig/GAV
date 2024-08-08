@@ -30,10 +30,16 @@ for token in tokens:
 # TODO: account for others e.g. Counter, defaultdict, range, etc.
 # TODO: strings are data structures, not primitive. map string to array?
 python_type_to_type = { # type(value).__name__ : type
-    "list": "array",
-    "tuple": "array",
-    "dict": "map",
-    "str": "string",
+    'list': 'array',
+    'tuple': 'array',
+    'dict': 'map',
+    'str': 'string',
+}
+
+# alternatively, types to include
+types_to_exclude = { # type(value).__name__
+    'function',
+    'module'
 }
 
 inferred_type = {} # {(name, depth) : type} # (type e.g. heap, graph representations, etc.) # depth or (function, depth) / f'{function} {depth}'?
@@ -42,8 +48,15 @@ steps = [(1, [], [], '')] # [(lineno, call_stack, node_types, stdout)] # 1-index
 
 lineno_to_steps = {} # {lineno : [step]}
 
+primitive_types = {
+    'int',
+    'float',
+    'str',
+    'bool'
+}
+
 def is_primitive(value):
-    return type(value).__name__ in {'int', 'float', 'str', 'bool'}
+    return type(value).__name__ in primitive_types
 
 def is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
     return name in freevars if is_primitive(value) else id(value) in data_structure_cell_id_to_name_and_currently_deepest_depth
@@ -55,20 +68,28 @@ def get_type(name, value, depth):
     return inferred_type.get((name, depth), python_type_to_type.get(type(value).__name__, type(value).__name__))
 
 def tracefunc(frame, event, arg):
+    if frame.f_code.co_filename != '<string>': # prevents tracing other files e.g. imported modules
+        return tracefunc
     frames = [] # [height : (function, {name : value}, varnames, cellvars, freevars)]
     current_frame = frame
     while current_frame:
         # convert co_varnames, co_cellvars, and co_freevars to hash sets if needed
-        frames.append((current_frame.f_code.co_name if current_frame.f_code.co_name != '<module>' else 'global', {name: value for name, value in current_frame.f_locals.items() if type(value).__name__ != 'function' and name != '__builtins__'}, current_frame.f_code.co_varnames, current_frame.f_code.co_cellvars, current_frame.f_code.co_freevars))
+        frames.append((
+            current_frame.f_code.co_name if current_frame.f_code.co_name != '<module>' else 'global',
+            {name: value for name, value in current_frame.f_locals.items() if not type(value).__name__ in types_to_exclude and name != '__builtins__'},
+            current_frame.f_code.co_varnames,
+            current_frame.f_code.co_cellvars,
+            current_frame.f_code.co_freevars))
         if current_frame.f_code.co_name == '<module>':
             break
         current_frame = current_frame.f_back
         
     primitive_cell_name_to_currently_deepest_depth = {} # {name : depth}
     data_structure_cell_id_to_name_and_currently_deepest_depth = {} # {id(value) : (name, depth)}
+    # if needed for optimization, can go back to manually handling the call stack, and only check current frame's locals and cell variables
     call_stack = [] # [depth : (function, {name : (type, value)})] # global is 0
     # can remove varnames if not using
-    for depth, (function, locals, varnames, cellvars, freevars) in enumerate(reversed(frames)):
+    for depth, (function, locals, varnames, cellvars, freevars) in enumerate(reversed(frames)): # TODO: function -> scope?
         _locals = {}
         for name, value in locals.items():
             if is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
@@ -129,8 +150,9 @@ finally:
     sys.settrace(None)
     sys.stdout = sys.__stdout__
 
-# for auxiliary_data_structure in [lineno_to_nodes, lineno_to_comment, inferred_type]:
-#     auxiliary_data_structure.clear()
+# def clear_collections(): # can clear in JavaScript after getting deliverables, e.g. steps, lineno_to_steps, etc., to save memory (unless it uses the same memory)
+#     for collection in [lineno_to_nodes, lineno_to_comment, inferred_type, steps, lineno_to_steps]:
+#         collection.clear()
 
 # print("Python steps:", steps)
 
