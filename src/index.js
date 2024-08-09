@@ -1,5 +1,10 @@
 // optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing)
+// import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing)
+import * as d3 from 'd3';
+import { loadPyodide } from 'pyodide';
+
+// window.loadPyodide = loadPyodide;
+
 
 const svg = d3.select("svg");
 svg.append("text")
@@ -312,72 +317,192 @@ await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute wh
 // let linenos;
 // let lines;
 
-// TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
-let editorLineEditor;
-let editorLoading = document.getElementById('editor-loading');
-require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
-require(['vs/editor/editor.main'], () => {
-    // console.time('editor');
-    editor = monaco.editor.create(document.getElementById('editor'), {
-        value: sampleCode,
-        language: 'python',
-        theme: 'vs-dark',
-        automaticLayout: true,
-        minimap: { enabled: false },
-        lineNumbers: 'on',
-        stickyScroll: { enabled: false},
-        scrollbar: { vertical: 'hidden' },
-        overviewRulerBorder: false,
-        overviewRulerLanes: 0,
-        folding: false,
-        lineNumbersMinChars: 3,
-        selectOnLineNumbers: false,
-        // "semanticHighlighting.enabled": true,
-        // glyphMargin: true,
-        // lineDecorationsWidth: 5,
-        // fontSize: '20px',
-        // mouseWheelZoom: true,
-        // renderLineHighlight: 'none',
-        // automaticLayout: true,
-    });
-    editorLoading.remove();
-    // console.timeEnd('editor');
-    editor.getModel().onDidChangeContent((e) => {
-        // TODO: ask the user for confirmation to reset, "don't tell me again"
-        unhighlightLines(); // for syntax error line highlighting
-        if (getPlayButtonState() !== playButtonState.Build) {
-            reset();
-        }
-    });
+// import { vscodeDark } from '@uiw/codemirror-theme-vscode';
+// import { EditorState } from '@codemirror/state';
+// import { python } from '@codemirror/lang-python';
 
-    // switch between .children array or nth-child selection if needed
-    // scrolling removes the earlier lines...
-    // linenos = document.querySelector("#editor div.margin-view-overlays"); // .children
-    // lineOverlays = document.querySelector("#editor div.view-overlays"); // .children
-    // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text"); // .children
-    // console.log('linenos:', linenos, 'lines:', lines); // DEBUG
+// const state = EditorState.create({
+//     doc: 'my source code',
+//     extensions: [vscodeDark, python()],
+// });
 
-    editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
-        value: '',
-        lineNumbers: () => 0,
-        readOnly: true,
-        renderLineHighlight: 'none',
-        language: 'python',
-        theme: 'vs-dark',
-        automaticLayout: true,
-        minimap: { enabled: false },
-        stickyScroll: { enabled: false},
-        scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
-        overviewRulerBorder: false,
-        overviewRulerLanes: 0,
-        folding: false,
-        lineNumbersMinChars: 3,
 
-        // cursorStyle: 'line', // Set cursor style to 'line' (or 'block', 'underline', etc.)
-        // cursorBlinking: 'hidden', // Hide the cursor
-        // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
-    });
+
+
+// import { vscodeDark } from './node_modules/@uiw/codemirror-theme-vscode/esm/dark.js';
+// import { EditorState } from './node_modules/@codemirror/state/dist/index.js';
+// import { basicSetup, EditorView } from './node_modules/codemirror/dist/index.js';
+// import { python } from './node_modules/@codemirror/lang-python/dist/index.js';
+
+// Ensure CodeMirror is available globally if needed
+// import CodeMirror from './node_modules/codemirror/dist/index.js';
+// window.CodeMirror = CodeMirror;
+
+// const editorView = new EditorView({
+//     state: EditorState.create({
+//         doc: 'print("Hello, World!")',
+//         extensions: [
+//             basicSetup,
+//             vscodeDark,
+//             python()
+//         ],
+//     }),
+//     parent: document.getElementById('editor'),
+// });
+
+// let editorLoading2 = document.getElementById('editor-loading');
+// if (editorLoading2) {
+//     editorLoading2.style.display = 'none';
+// }
+
+
+
+
+
+
+
+// // import { vscodeDark } from 'https://esm.sh/@uiw/codemirror-theme-vscode';
+// // import { EditorState } from 'https://esm.sh/@codemirror/state';
+// // import { basicSetup } from 'https://esm.sh/codemirror';
+// // import { python } from 'https://esm.sh/@codemirror/lang-python';
+
+// const editorView = new EditorView({
+//     state: EditorState.create({
+//         doc: 'print("Hello, World!")',
+//         extensions: [
+//             basicSetup,
+//             vscodeDark,
+//             python()
+//         ],
+//     }),
+//     parent: document.getElementById('editor'),
+// });
+
+// let editorLoading2 = document.getElementById('editor-loading');
+// if (editorLoading2) {
+//     editorLoading2.style.display = 'none';
+// }
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { vscodeDark } from '@uiw/codemirror-theme-vscode';
+import { EditorState } from '@codemirror/state';
+import { basicSetup, EditorView } from 'codemirror';
+import { python } from '@codemirror/lang-python';
+
+const editorView = new EditorView({
+    state: EditorState.create({
+        doc: 'print("Hello, World!")',
+        extensions: [
+            basicSetup,
+            vscodeDark,
+            python()
+        ],
+    }),
+    parent: document.getElementById('editor'),
 });
+
+let editorLoading2 = document.getElementById('editor-loading');
+if (editorLoading2) {
+    editorLoading2.style.display = 'none';
+}
+
+
+
+  
+
+// // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
+// let editorLineEditor;
+// let editorLoading = document.getElementById('editor-loading');
+// require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
+// require(['vs/editor/editor.main'], () => {
+//     // console.time('editor');
+//     editor = monaco.editor.create(document.getElementById('editor'), {
+//         value: sampleCode,
+//         language: 'python',
+//         theme: 'vs-dark',
+//         automaticLayout: true,
+//         minimap: { enabled: false },
+//         lineNumbers: 'on',
+//         stickyScroll: { enabled: false},
+//         scrollbar: { vertical: 'hidden' },
+//         overviewRulerBorder: false,
+//         overviewRulerLanes: 0,
+//         folding: false,
+//         lineNumbersMinChars: 3,
+//         selectOnLineNumbers: false,
+//         // "semanticHighlighting.enabled": true,
+//         // glyphMargin: true,
+//         // lineDecorationsWidth: 5,
+//         // fontSize: '20px',
+//         // mouseWheelZoom: true,
+//         // renderLineHighlight: 'none',
+//         // automaticLayout: true,
+//     });
+//     editorLoading.remove(); // editorLoading.style.display = 'none';
+//     // console.timeEnd('editor');
+//     editor.getModel().onDidChangeContent((e) => {
+//         // TODO: ask the user for confirmation to reset, "don't tell me again"
+//         unhighlightLines(); // for syntax error line highlighting
+//         if (getPlayButtonState() !== playButtonState.Build) {
+//             reset();
+//         }
+//     });
+
+//     // switch between .children array or nth-child selection if needed
+//     // scrolling removes the earlier lines...
+//     // linenos = document.querySelector("#editor div.margin-view-overlays"); // .children
+//     // lineOverlays = document.querySelector("#editor div.view-overlays"); // .children
+//     // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text"); // .children
+//     // console.log('linenos:', linenos, 'lines:', lines); // DEBUG
+
+//     editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
+//         value: '',
+//         lineNumbers: () => 0,
+//         readOnly: true,
+//         renderLineHighlight: 'none',
+//         language: 'python',
+//         theme: 'vs-dark',
+//         automaticLayout: true,
+//         minimap: { enabled: false },
+//         stickyScroll: { enabled: false},
+//         scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
+//         overviewRulerBorder: false,
+//         overviewRulerLanes: 0,
+//         folding: false,
+//         lineNumbersMinChars: 3,
+
+//         // cursorStyle: 'line', // Set cursor style to 'line' (or 'block', 'underline', etc.)
+//         // cursorBlinking: 'hidden', // Hide the cursor
+//         // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
+//     });
+// });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 let steps, linenoToSteps, error, errorLineno;
 
