@@ -1,11 +1,19 @@
+import { EditorView, basicSetup } from "codemirror";
+import { python } from "@codemirror/lang-python";
+import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 // optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing)
+// import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing)
+import * as d3 from "d3";
 
 const svg = d3.select("svg");
 svg.append("text")
    .attr("x", 50)
    .attr("y", 50)
    .text("HELLO WORLD");
+
+
+
+
 
 
 
@@ -311,6 +319,21 @@ await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute wh
 
 // let linenos;
 // let lines;
+
+
+
+
+let editor1 = new EditorView({
+    doc: 'print("Hello, World!")',
+    extensions: [
+        vscodeDark,
+        basicSetup,
+        python()
+    ],
+    parent: document.getElementById("editor")
+});
+
+
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
 let editorLineEditor;
