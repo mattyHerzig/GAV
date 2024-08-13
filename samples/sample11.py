@@ -4,7 +4,12 @@ matrix = [
     [7, 8, 9]
 ]
 
-for row in matrix:
-    for col in row:
-        print(col)
+for array in matrix:
+    for element in array:
+        print(element)
 
+matrix.pop(0)
+
+for array in matrix:
+    for element in array:
+        print(element)
