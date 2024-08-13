@@ -1,6 +1,5 @@
 // optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing)
-
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing) or https://esm.sh/d3
 const svg = d3.select("svg");
 svg.append("text")
    .attr("x", 50)
@@ -312,7 +311,8 @@ await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute wh
 // let linenos;
 // let lines;
 
-// if needed, can use an alternative e.g. https://cdn.jsdelivr.net/npm/<name>/+esm, install locally, importmap
+// if needed, can use an alternative importing e.g. https://cdn.jsdelivr.net/npm/<name>/+esm, install locally, importmap
+// or, try github.com/zikaari/monaco-editor-textmate instead
 import { createHighlighter } from 'https://esm.sh/shiki'
 import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
@@ -346,6 +346,7 @@ require(['vs/editor/editor.main'], async () => {
         folding: false,
         lineNumbersMinChars: 3,
         selectOnLineNumbers: false,
+        'bracketPairColorization.enabled': false, // https://github.com/microsoft/monaco-editor/issues/3384, https://github.com/microsoft/monaco-editor/issues/3013, https://github.com/microsoft/monaco-editor/blob/main/CHANGELOG.md (despite the documentation)
         // bracketPairColorization: { enabled: false },
         // defaultColorDecorators: false,
         // "semanticHighlighting.enabled": true,
