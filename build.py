@@ -79,19 +79,37 @@ def get_type(name, value, depth):
 #    on top of unusual types, probably should considering nested data structures being cell variable...
 #    find a way to refer to memory address?
 #    I don’t think primitive data structure elements can be free variables?
+#    if can't refer to specific element e.g. key for set, can use the name of the data struture?
 # Also, print type with data structure element if needed
 # string [('char', c) for c in list(value)] ?
-def get_type_and_value(name, value, depth):
-    type = get_type(name, value, depth)
-    match type:
-        case 'array':
-            return (type, [get_type_and_value('', v, depth) for v in value])
-        case 'set':
-            return (type, {get_type_and_value('', v, depth) for v in value})
-        case 'map':
-            return (type, {get_type_and_value('', k, depth): get_type_and_value('', v, -1) for k, v in value.items()})
-        case _:
-            return (type, deepcopy(value))
+# can simplify the arguments by using global variables and clear them on each tracefunc 
+def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function):
+    # print('name', name, 'value', value, 'depth', depth, file=sys.__stdout__) # DEBUG
+    if is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
+        if is_primitive(value):
+            cell_name = name
+            cell_depth = primitive_cell_name_to_currently_deepest_depth[name]
+        else:
+            cell_name, cell_depth = data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)]
+        # print('call_stack', call_stack, 'cell_depth', cell_depth, file=sys.__stdout__)
+        return ('free', f'(cell {cell_name} from {call_stack[cell_depth][0] if cell_depth < len(call_stack) else function} {cell_depth})')
+    else:
+        if is_cellvar(name, value, cellvars):
+            if is_primitive(value):
+                primitive_cell_name_to_currently_deepest_depth[name] = depth
+            else:
+                data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)] = (name, depth)
+        type = get_type(name, value, depth)
+        match type:
+            case 'array':
+                return (type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for i, v in enumerate(value)])
+            case 'set':
+                return (type, {get_type_and_value(name, k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for k in value})
+            case 'map':
+                return (type, {get_type_and_value(name, k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function): \
+                               get_type_and_value(f'{name}[${f'"${k}"' if type(k).__str__ == 'str' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for k, v in value.items()})
+            case _:
+                return (type, deepcopy(value))
 
 # class TracingError(Exception):
 #     def __init__(self, message):
@@ -123,20 +141,7 @@ def tracefunc(frame, event, arg):
     for depth, (function, locals, varnames, cellvars, freevars) in enumerate(reversed(frames)): # TODO: function -> scope?
         _locals = {}
         for name, value in locals.items():
-            if is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
-                if is_primitive(value):
-                    cell_name = name
-                    cell_depth = primitive_cell_name_to_currently_deepest_depth[name]
-                else:
-                    cell_name, cell_depth = data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)]
-                _locals[name] = ('free', f'(cell {cell_name} from {call_stack[cell_depth][0]} {cell_depth})')
-            else:
-                if is_cellvar(name, value, cellvars):
-                    if is_primitive(value):
-                        primitive_cell_name_to_currently_deepest_depth[name] = depth
-                    else:
-                        data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)] = (name, depth)
-                _locals[name] = get_type_and_value(name, value, depth)
+            _locals[name] = get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function)
         call_stack.append((function, _locals))
 
     node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if frame.f_lineno in lineno_to_nodes and lineno_to_nodes[frame.f_lineno] else [] # temporarily just using type name for demonstration
