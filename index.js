@@ -292,7 +292,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample4.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample10.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
@@ -312,16 +312,317 @@ await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute wh
 // let linenos;
 // let lines;
 
+// https://cdn.jsdelivr.net/npm/d3@7/+esm
+
+// import { createHighlighter } from 'shiki'
+// import { createHighlighter } from './node_modules/@shikijs/core/dist/index.mjs'
+// import { createHighlighter } from 'https://cdn.jsdelivr.net/npm/shiki'
+import { createHighlighter } from 'https://esm.sh/shiki'
+// import { shikiToMonaco } from '@shikijs/monaco'
+// import { shikiToMonaco } from './node_modules/@shikijs/monaco/dist/index.mjs'
+// import { shikiToMonaco } from 'https://cdn.jsdelivr.net/npm/@shikijs/monaco'
+import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
+
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
 let editorLineEditor;
 let editorLoading = document.getElementById('editor-loading');
 require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
-require(['vs/editor/editor.main'], () => {
+require(['vs/editor/editor.main'], async () => {
+
+    const highlighter = await createHighlighter({
+        themes: ['dark-plus'],
+        langs: ['python']
+    })
+    
+    monaco.languages.register({ id: 'python' })
+    
+    shikiToMonaco(highlighter, monaco)
+
+
+    // monaco.editor.defineTheme('vs-dark-modern', {
+    //     base: 'vs-dark',
+    //     inherit: false,
+    //     rules: [
+    //         { token: '', foreground: 'D4D4D4', background: '1E1E1E' },
+    //         { token: 'invalid', foreground: 'f44747' },
+    //         { token: 'emphasis', fontStyle: 'italic' },
+    //         { token: 'strong', fontStyle: 'bold' },
+    
+    //         { token: 'identifier', foreground: '74B0DF' },
+    //         { token: 'entity', foreground: '4864AA' },
+    //         { token: 'constructor', foreground: '9CDCFE' },
+    //         { token: 'operators', foreground: '569CD6' },
+    //         { token: 'tag', foreground: '608B4E' },
+    //         { token: 'namespace', foreground: 'B5CEA8' },
+    //         { token: 'keyword', foreground: '5BB498' },
+    //         { token: 'info-token', foreground: 'B46695' },
+    //         { token: 'type', foreground: '3DC9B0' },
+    //         { token: 'string', foreground: 'DCDCDC' },
+    //         { token: 'warn-token', foreground: '808080' },
+    //         { token: 'predefined', foreground: '4F76AC' },
+    //         { token: 'string.escape', foreground: 'A79873' },
+    //         { token: 'error-token', foreground: 'DD6A6F' },
+    //         { token: 'invalid', foreground: 'f44747' },
+    //         { token: 'comment', foreground: '608B4E' },
+    //         { token: 'comment.doc', foreground: 'CE9178' },
+    //         { token: 'regexp', foreground: '9CDCFE' },
+    //         { token: 'constant', foreground: 'CE9178' },
+    //         { token: 'attribute', foreground: 'B5CEA8' },
+    
+    //         { token: 'delimiter', foreground: 'DCDCDC' },
+    //         { token: 'delimiter.curly', foreground: '808080' },
+    //         { token: 'delimiter.square', foreground: '808080' },
+    //         { token: 'delimiter.parenthesis', foreground: '808080' },
+    //         { token: 'delimiter.angle', foreground: '808080' },
+    //         { token: 'delimiter.array', foreground: '808080' },
+    //         { token: 'delimiter.bracket', foreground: '808080' },
+    
+    //         { token: 'number', foreground: 'B5CEA8' },
+    //         { token: 'number.hex', foreground: '5BB498' },
+    //         { token: 'number.octal', foreground: '5BB498' },
+    //         { token: 'number.binary', foreground: '5BB498' },
+    //         { token: 'number.float', foreground: '5BB498' },
+    
+    //         { token: 'variable.name', foreground: '9CDCFE' },
+    //         { token: 'variable.value', foreground: 'CE9178' },
+    
+    //         { token: 'meta.content', foreground: 'CE9178' },
+    //     ],
+    //     colors: {
+    //         'editor.background': '#1E1E1E',
+    //         'editor.foreground': '#D4D4D4',
+    //         'editor.inactiveSelection': '#3A3D41',
+    //         'editorIndentGuides': '#404040',
+    //         'editor.selectionHighlight': '#ADD6FF26'
+    //     }
+    // });
+
+    
+    // monaco.editor.defineTheme('vs-dark-modern', {
+    //     base: 'vs-dark',
+    //     // inherit: true,
+    //     rules: [
+    //         // { token: 'keyword', foreground: '569CD6' },
+    //         // { token: 'identifier', foreground: '9CDCFE' },
+    //         // { token: 'type.identifier', foreground: '4EC9B0' },
+    //         // { token: 'string', foreground: 'CE9178' },
+    //         // { token: 'number', foreground: 'B5CEA8' },
+    //         // { token: 'comment', foreground: '6A9955' },
+    //         // { token: 'class', foreground: '4EC9B0' },
+    //         // { token: 'function', foreground: 'DCDCAA' },
+    //         // // Add more token customizations as needed
+
+
+    //         // { token: 'keyword', foreground: '569CD6' },
+    //         // { token: 'identifier', foreground: '9CDCFE' },
+    //         // { token: 'type', foreground: '4EC9B0' }, // Token type for classes
+    //         // { token: 'constructor', foreground: '4EC9B0' }, // Another possible token type for classes
+    //         // { token: 'string', foreground: 'CE9178' },
+    //         // { token: 'number', foreground: 'B5CEA8' },
+    //         // { token: 'comment', foreground: '6A9955' },
+    //         // { token: 'function', foreground: 'DCDCAA' },
+
+
+    //         { token: 'comment', foreground: '4EC9B0' },
+    //     ],
+    //     colors: {
+    //         // 'activityBar.activeBorder': '#0078D4',
+    //         // 'activityBar.background': '#181818',
+    //         // 'activityBar.border': '#2B2B2B',
+    //         // 'activityBar.foreground': '#D7D7D7',
+    //         // 'activityBar.inactiveForeground': '#868686',
+    //         // 'activityBarBadge.background': '#0078D4',
+    //         // 'activityBarBadge.foreground': '#FFFFFF',
+    //         // 'badge.background': '#616161',
+    //         // 'badge.foreground': '#F8F8F8',
+    //         // 'button.background': '#0078D4',
+    //         // 'button.border': '#FFFFFF12',
+    //         // 'button.foreground': '#FFFFFF',
+    //         // 'button.hoverBackground': '#026EC1',
+    //         // 'button.secondaryBackground': '#313131',
+    //         // 'button.secondaryForeground': '#CCCCCC',
+    //         // 'button.secondaryHoverBackground': '#3C3C3C',
+    //         // 'chat.slashCommandBackground': '#34414B',
+    //         // 'chat.slashCommandForeground': '#40A6FF',
+    //         // 'checkbox.background': '#313131',
+    //         // 'checkbox.border': '#3C3C3C',
+    //         // 'debugToolBar.background': '#181818',
+    //         // 'descriptionForeground': '#9D9D9D',
+    //         // 'dropdown.background': '#313131',
+    //         // 'dropdown.border': '#3C3C3C',
+    //         // 'dropdown.foreground': '#CCCCCC',
+    //         // 'dropdown.listBackground': '#1F1F1F',
+    //         // 'editor.background': '#1F1F1F',
+    //         // 'editor.findMatchBackground': '#9E6A03',
+    //         // 'editor.foreground': '#CCCCCC',
+    //         // 'editorGroup.border': '#FFFFFF17',
+    //         // 'editorGroupHeader.tabsBackground': '#181818',
+    //         // 'editorGroupHeader.tabsBorder': '#2B2B2B',
+    //         // 'editorGutter.addedBackground': '#2EA043',
+    //         // 'editorGutter.deletedBackground': '#F85149',
+    //         // 'editorGutter.modifiedBackground': '#0078D4',
+    //         // 'editorLineNumber.activeForeground': '#CCCCCC',
+    //         // 'editorLineNumber.foreground': '#6E7681',
+    //         // 'editorOverviewRuler.border': '#010409',
+    //         // 'editorWidget.background': '#202020',
+    //         // 'errorForeground': '#F85149',
+    //         // 'focusBorder': '#0078D4',
+    //         // 'foreground': '#CCCCCC',
+    //         // 'icon.foreground': '#CCCCCC',
+    //         // 'input.background': '#313131',
+    //         // 'input.border': '#3C3C3C',
+    //         // 'input.foreground': '#CCCCCC',
+    //         // 'input.placeholderForeground': '#989898',
+    //         // 'inputOption.activeBackground': '#2489DB82',
+    //         // 'inputOption.activeBorder': '#2488DB',
+    //         // 'keybindingLabel.foreground': '#CCCCCC',
+    //         // 'menu.background': '#1F1F1F',
+    //         // 'menu.selectionBackground': '#0078d4',
+    //         // 'notificationCenterHeader.background': '#1F1F1F',
+    //         // 'notificationCenterHeader.foreground': '#CCCCCC',
+    //         // 'notifications.background': '#1F1F1F',
+    //         // 'notifications.border': '#2B2B2B',
+    //         // 'notifications.foreground': '#CCCCCC',
+    //         // 'panel.background': '#181818',
+    //         // 'panel.border': '#2B2B2B',
+    //         // 'panelInput.border': '#2B2B2B',
+    //         // 'panelTitle.activeBorder': '#0078D4',
+    //         // 'panelTitle.activeForeground': '#CCCCCC',
+    //         // 'panelTitle.inactiveForeground': '#9D9D9D',
+    //         // 'peekViewEditor.background': '#1F1F1F',
+    //         // 'peekViewEditor.matchHighlightBackground': '#BB800966',
+    //         // 'peekViewResult.background': '#1F1F1F',
+    //         // 'peekViewResult.matchHighlightBackground': '#BB800966',
+    //         // 'pickerGroup.border': '#3C3C3C',
+    //         // 'progressBar.background': '#0078D4',
+    //         // 'quickInput.background': '#222222',
+    //         // 'quickInput.foreground': '#CCCCCC',
+    //         // 'settings.dropdownBackground': '#313131',
+    //         // 'settings.dropdownBorder': '#3C3C3C',
+    //         // 'settings.headerForeground': '#FFFFFF',
+    //         // 'settings.modifiedItemIndicator': '#BB800966',
+    //         // 'sideBar.background': '#181818',
+    //         // 'sideBar.border': '#2B2B2B',
+    //         // 'sideBar.foreground': '#CCCCCC',
+    //         // 'sideBarSectionHeader.background': '#181818',
+    //         // 'sideBarSectionHeader.border': '#2B2B2B',
+    //         // 'sideBarSectionHeader.foreground': '#CCCCCC',
+    //         // 'sideBarTitle.foreground': '#CCCCCC',
+    //         // 'statusBar.background': '#181818',
+    //         // 'statusBar.border': '#2B2B2B',
+    //         // 'statusBar.debuggingBackground': '#0078D4',
+    //         // 'statusBar.debuggingForeground': '#FFFFFF',
+    //         // 'statusBar.focusBorder': '#0078D4',
+    //         // 'statusBar.foreground': '#CCCCCC',
+    //         // 'statusBar.noFolderBackground': '#1F1F1F',
+    //         // 'statusBarItem.focusBorder': '#0078D4',
+    //         // 'statusBarItem.prominentBackground': '#6E768166',
+    //         // 'statusBarItem.remoteBackground': '#0078D4',
+    //         // 'statusBarItem.remoteForeground': '#FFFFFF',
+    //         // 'tab.activeBackground': '#1F1F1F',
+    //         // 'tab.activeBorder': '#1F1F1F',
+    //         // 'tab.activeBorderTop': '#0078D4',
+    //         // 'tab.activeForeground': '#FFFFFF',
+    //         // 'tab.selectedBorderTop': '#6caddf',
+    //         // 'tab.border': '#2B2B2B',
+    //         // 'tab.hoverBackground': '#1F1F1F',
+    //         // 'tab.inactiveBackground': '#181818',
+    //         // 'tab.inactiveForeground': '#9D9D9D',
+    //         // 'tab.unfocusedActiveBorder': '#1F1F1F',
+    //         // 'tab.unfocusedActiveBorderTop': '#2B2B2B',
+    //         // 'tab.unfocusedHoverBackground': '#1F1F1F',
+    //         // 'terminal.foreground': '#CCCCCC',
+    //         // 'terminal.tab.activeBorder': '#0078D4',
+    //         // 'textBlockQuote.background': '#2B2B2B',
+    //         // 'textBlockQuote.border': '#616161',
+    //         // 'textCodeBlock.background': '#2B2B2B',
+    //         // 'textLink.activeForeground': '#4daafc',
+    //         // 'textLink.foreground': '#4daafc',
+    //         // 'textPreformat.foreground': '#D0D0D0',
+    //         // 'textPreformat.background': '#3C3C3C',
+    //         // 'textSeparator.foreground': '#21262D',
+    //         // 'titleBar.activeBackground': '#181818',
+    //         // 'titleBar.activeForeground': '#CCCCCC',
+    //         // 'titleBar.border': '#2B2B2B',
+    //         // 'titleBar.inactiveBackground': '#1F1F1F',
+    //         // 'titleBar.inactiveForeground': '#9D9D9D',
+    //         // 'welcomePage.tileBackground': '#2B2B2B',
+    //         // 'welcomePage.progress.foreground': '#0078D4',
+    //         // 'widget.border': '#313131'
+    //     }
+    // });
+
+    // monaco.editor.defineTheme('vs-dark-modern', {
+    //     base: 'vs-dark',
+    //     inherit: false,
+    //     rules: [
+            
+    //         { token: 'support.class', foreground: 'D4D4D4', background: '1E1E1E' },
+    //         // { token: '', foreground: 'D4D4D4', background: '1E1E1E' },
+    //         // { token: 'invalid', foreground: 'f44747' },
+    //         // { token: 'emphasis', fontStyle: 'italic' },
+    //         // { token: 'strong', fontStyle: 'bold' },
+    
+    //         // { token: 'variable', foreground: '74B0DF' }, // identifier?
+    //         // { token: 'variable.predefined', foreground: '4864AA' },
+    //         // { token: 'variable.parameter', foreground: '9CDCFE' },
+    //         // { token: 'constant', foreground: '569CD6' },
+    //         // { token: 'comment', foreground: '608B4E' },
+    //         // { token: 'number', foreground: 'B5CEA8' },
+    //         // { token: 'number.hex', foreground: '5BB498' },
+    //         // { token: 'regexp', foreground: 'B46695' },
+    //         // { token: 'annotation', foreground: 'cc6666' },
+    //         // { token: 'type', foreground: '3DC9B0' },
+    
+    //         // { token: 'delimiter', foreground: 'DCDCDC' },
+    //         // { token: 'delimiter.html', foreground: '808080' },
+    //         // { token: 'delimiter.xml', foreground: '808080' },
+    
+    //         // { token: 'tag', foreground: '569CD6' },
+    //         // { token: 'tag.id.jade', foreground: '4F76AC' },
+    //         // { token: 'tag.class.jade', foreground: '4F76AC' },
+    //         // { token: 'meta.scss', foreground: 'A79873' },
+    //         // { token: 'meta.tag', foreground: 'CE9178' },
+    //         // { token: 'metatag', foreground: 'DD6A6F' },
+    //         // { token: 'metatag.content.html', foreground: '9CDCFE' },
+    //         // { token: 'metatag.html', foreground: '569CD6' },
+    //         // { token: 'metatag.xml', foreground: '569CD6' },
+    //         // { token: 'metatag.php', fontStyle: 'bold' },
+    
+    //         // { token: 'key', foreground: '9CDCFE' },
+    //         // { token: 'string.key.json', foreground: '9CDCFE' },
+    //         // { token: 'string.value.json', foreground: 'CE9178' },
+    
+    //         // { token: 'attribute.name', foreground: '9CDCFE' },
+    //         // { token: 'attribute.value', foreground: 'CE9178' },
+    //         // { token: 'attribute.value.number.css', foreground: 'B5CEA8' },
+    //         // { token: 'attribute.value.unit.css', foreground: 'B5CEA8' },
+    //         // { token: 'attribute.value.hex.css', foreground: 'D4D4D4' },
+    
+    //         // { token: 'string', foreground: 'CE9178' },
+    //         // { token: 'string.sql', foreground: 'FF0000' },
+    
+    //         // { token: 'keyword', foreground: '569CD6' },
+    //         // { token: 'keyword.flow', foreground: 'C586C0' },
+    //         // { token: 'keyword.json', foreground: 'CE9178' },
+    //         // { token: 'keyword.flow.scss', foreground: '569CD6' },
+    
+    //         // { token: 'operator.scss', foreground: '909090' },
+    //         // { token: 'operator.sql', foreground: '778899' },
+    //         // { token: 'operator.swift', foreground: '909090' },
+    //         // { token: 'predefined.sql', foreground: 'FF00FF' },
+    //     ],
+    //     colors: {}
+    // });
+    
+
+    // monaco.editor.setTheme('vs-dark-modern')
+
     // console.time('editor');
     editor = monaco.editor.create(document.getElementById('editor'), {
         value: sampleCode,
         language: 'python',
-        theme: 'vs-dark',
+        theme: 'dark-plus',
         automaticLayout: true,
         minimap: { enabled: false },
         lineNumbers: 'on',
@@ -357,26 +658,26 @@ require(['vs/editor/editor.main'], () => {
     // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text"); // .children
     // console.log('linenos:', linenos, 'lines:', lines); // DEBUG
 
-    editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
-        value: '',
-        lineNumbers: () => 0,
-        readOnly: true,
-        renderLineHighlight: 'none',
-        language: 'python',
-        theme: 'vs-dark',
-        automaticLayout: true,
-        minimap: { enabled: false },
-        stickyScroll: { enabled: false},
-        scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
-        overviewRulerBorder: false,
-        overviewRulerLanes: 0,
-        folding: false,
-        lineNumbersMinChars: 3,
+    // editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
+    //     value: '',
+    //     lineNumbers: () => 0,
+    //     readOnly: true,
+    //     renderLineHighlight: 'none',
+    //     language: 'python',
+    //     theme: 'vs-dark-modern',
+    //     automaticLayout: true,
+    //     minimap: { enabled: false },
+    //     stickyScroll: { enabled: false},
+    //     scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
+    //     overviewRulerBorder: false,
+    //     overviewRulerLanes: 0,
+    //     folding: false,
+    //     lineNumbersMinChars: 3,
 
-        // cursorStyle: 'line', // Set cursor style to 'line' (or 'block', 'underline', etc.)
-        // cursorBlinking: 'hidden', // Hide the cursor
-        // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
-    });
+    //     // cursorStyle: 'line', // Set cursor style to 'line' (or 'block', 'underline', etc.)
+    //     // cursorBlinking: 'hidden', // Hide the cursor
+    //     // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
+    // });
 });
 
 let steps, linenoToSteps, error, errorLineno;
