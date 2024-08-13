@@ -1,3 +1,8 @@
+// if needed, can use an alternative importing e.g. https://cdn.jsdelivr.net/npm/<name>/+esm, install locally, importmap
+// or, try github.com/zikaari/monaco-editor-textmate instead
+import { createHighlighter } from 'https://esm.sh/shiki'
+import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
+
 // optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing) or https://esm.sh/d3
 const svg = d3.select("svg");
@@ -241,7 +246,8 @@ function stepRight() {
 
 stepSliderLeft.addEventListener('click', () => stepLeft());
 
-stepSliderRight.addEventListener('click', () => stepRight());
+// TODO: additionally, when you keyboard navigable to the stepSlider using tab, you can use the left and right arrow keys which should trigger this event instead of input event listener?
+stepSliderRight.addEventListener('click', () => stepRight()); 
 
 const dataStructures = document.getElementById('data-structures'); // TODO
 // const primitives = document.getElementById('primitives');
@@ -259,7 +265,7 @@ function reset() {
     stopPlaying = true;
     setStepSliderMax(10);
     setStepSliderValue(5);
-    stepCounter.innerText = `?/?`;
+    stepCounter.innerText = '';
     stepSlider.setAttribute('disabled', '');
     stepSliderLeft.setAttribute('disabled', '');
     stepSliderRight.setAttribute('disabled', '');
@@ -291,7 +297,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample10.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample4.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
@@ -310,11 +316,6 @@ await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute wh
 
 // let linenos;
 // let lines;
-
-// if needed, can use an alternative importing e.g. https://cdn.jsdelivr.net/npm/<name>/+esm, install locally, importmap
-// or, try github.com/zikaari/monaco-editor-textmate instead
-import { createHighlighter } from 'https://esm.sh/shiki'
-import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
 let editorLineEditor;
@@ -348,7 +349,7 @@ require(['vs/editor/editor.main'], async () => {
         selectOnLineNumbers: false,
         'bracketPairColorization.enabled': false, // https://github.com/microsoft/monaco-editor/issues/3384, https://github.com/microsoft/monaco-editor/issues/3013, https://github.com/microsoft/monaco-editor/blob/main/CHANGELOG.md (despite the documentation)
         // bracketPairColorization: { enabled: false },
-        // defaultColorDecorators: false,
+        scrollBeyondLastLine: false,
         // "semanticHighlighting.enabled": true,
         // glyphMargin: true,
         // lineDecorationsWidth: 5,
@@ -374,26 +375,27 @@ require(['vs/editor/editor.main'], async () => {
     // lines = document.querySelector("#editor div.view-lines.monaco-mouse-cursor-text"); // .children
     // console.log('linenos:', linenos, 'lines:', lines); // DEBUG
 
-    // editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
-    //     value: '',
-    //     lineNumbers: () => 0,
-    //     readOnly: true,
-    //     renderLineHighlight: 'none',
-    //     language: 'python',
-    //     theme: 'vs-dark-modern',
-    //     automaticLayout: true,
-    //     minimap: { enabled: false },
-    //     stickyScroll: { enabled: false},
-    //     scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
-    //     overviewRulerBorder: false,
-    //     overviewRulerLanes: 0,
-    //     folding: false,
-    //     lineNumbersMinChars: 3,
-
-    //     // cursorStyle: 'line', // Set cursor style to 'line' (or 'block', 'underline', etc.)
-    //     // cursorBlinking: 'hidden', // Hide the cursor
-    //     // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
-    // });
+    editorLineEditor = monaco.editor.create(document.getElementById('editor-line'), {
+        value: '',
+        lineNumbers: () => 0,
+        readOnly: true,
+        renderLineHighlight: 'none',
+        language: 'python',
+        theme: 'dark-plus',
+        automaticLayout: true,
+        minimap: { enabled: false },
+        stickyScroll: { enabled: false},
+        scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
+        overviewRulerBorder: false,
+        overviewRulerLanes: 0,
+        folding: false,
+        lineNumbersMinChars: 3,
+        'bracketPairColorization.enabled': false, // see above
+        scrollBeyondLastLine: false
+        // cursorStyle: 'line', // Set cursor style to 'line' (or 'block', 'underline', etc.)
+        // cursorBlinking: 'hidden', // Hide the cursor
+        // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
+    });
 });
 
 let steps, linenoToSteps, error, errorLineno;

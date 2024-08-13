@@ -60,7 +60,15 @@ input[type="range"]:active {
     /* background: red; */
     box-shadow: -15ch 0 0 15ch rgb(15, 181, 236);
 }
+#step-slider::-moz-range-thumb {
+    width: 0px;
+    border: none;
+    box-shadow: -15ch 0 0 15ch rgb(15, 181, 236);
+}
 #step-slider:hover::-webkit-slider-thumb {
+    box-shadow: -15ch 0 0 15ch rgb(11, 148, 194);
+}
+#step-slider:hover::-moz-range-thumb {
     box-shadow: -15ch 0 0 15ch rgb(11, 148, 194);
 }
 #buttons::-webkit-scrollbar {
