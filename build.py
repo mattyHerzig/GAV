@@ -8,6 +8,7 @@ import ast
 import tokenize
 import io
 import traceback
+from copy import deepcopy
 
 # lines = [''] + code.split('\n') # 1-indexed
 
@@ -31,7 +32,7 @@ for token in tokens:
 # TODO: strings are data structures, not primitive. map string to array?
 python_type_to_type = { # type(value).__name__ : type
     'list': 'array',
-    'tuple': 'array',
+    'tuple': 'array', # or keep as tuple and use paranthesis where needed?
     'dict': 'map',
     'str': 'string',
 }
@@ -55,6 +56,13 @@ primitive_types = {
     'bool'
 }
 
+# 'string'?
+data_structure_types = {
+    'array',
+    'set',
+    'map'
+}
+
 def is_primitive(value):
     return type(value).__name__ in primitive_types
 
@@ -66,6 +74,29 @@ def is_cellvar(name, value, cellvars):
 
 def get_type(name, value, depth):
     return inferred_type.get((name, depth), python_type_to_type.get(type(value).__name__, type(value).__name__))
+
+# For now, assuming I don't need to name data structure elements e.g. nums[0], because they typically won't be unusual types. Otherwise, would need to come up with a way to consistently refer to the same element
+#    on top of unusual types, probably should considering nested data structures being cell variable...
+#    find a way to refer to memory address?
+#    I don’t think primitive data structure elements can be free variables?
+# Also, print type with data structure element if needed
+# string [('char', c) for c in list(value)] ?
+def get_type_and_value(name, value, depth):
+    type = get_type(name, value, depth)
+    match type:
+        case 'array':
+            return (type, [get_type_and_value('', v, depth) for v in value])
+        case 'set':
+            return (type, {get_type_and_value('', v, depth) for v in value})
+        case 'map':
+            return (type, {get_type_and_value('', k, depth): get_type_and_value('', v, -1) for k, v in value.items()})
+        case _:
+            return (type, deepcopy(value))
+
+# class TracingError(Exception):
+#     def __init__(self, message):
+#         super().__init__(message)
+# ... raise TracingError(f"An error occurred during tracing: {e}") # cover entire file if needed
 
 def tracefunc(frame, event, arg):
     if frame.f_code.co_filename != '<string>': # prevents tracing other files e.g. imported modules
@@ -105,9 +136,9 @@ def tracefunc(frame, event, arg):
                         primitive_cell_name_to_currently_deepest_depth[name] = depth
                     else:
                         data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)] = (name, depth)
-                _locals[name] = (get_type(name, value, depth), value)
+                _locals[name] = get_type_and_value(name, value, depth)
         call_stack.append((function, _locals))
-        
+
     node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if frame.f_lineno in lineno_to_nodes and lineno_to_nodes[frame.f_lineno] else [] # temporarily just using type name for demonstration
     stdout = sys.stdout.getvalue()
     # for some reason, if `if frame.f_lineno == 0: return tracefunc` is included at the beginning, some early steps are skipped? also handle lines being called twice? Eg with different events # not (1 <= frame.f_lineno <= len(lines) + 1)
@@ -116,7 +147,6 @@ def tracefunc(frame, event, arg):
         if frame.f_lineno not in lineno_to_steps:
             lineno_to_steps[frame.f_lineno] = []
         lineno_to_steps[frame.f_lineno].append(len(steps) - 1)
-    
     return tracefunc
 
 # simplification of the traceback. Can revert to unsimplified and rigorous if needed
@@ -156,5 +186,4 @@ finally:
 
 # print("Python steps:", steps)
 
-# TODO: format deliverables for JavaScript e.g. steps e.g. can't use tuples as keys (unless Pyodoide accounts for e.g. with Proxy), non-breaking spaces instead of spaces, etc.
-
+# TODO: format deliverables for JavaScript e.g. steps e.g. can't use tuples as keys (unless Pyodoide accounts for e.g. with Proxy) (e.g. may convert to list?), non-breaking spaces instead of spaces, etc.

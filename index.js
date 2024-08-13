@@ -3,13 +3,54 @@
 import { createHighlighter } from 'https://esm.sh/shiki'
 import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
-// optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing) or https://esm.sh/d3
-const svg = d3.select("svg");
-svg.append("text")
-   .attr("x", 50)
-   .attr("y", 50)
-   .text("HELLO WORLD");
+
+
+
+
+
+// import * as d3 from "https://cdn.jsdelivr.net/npm/d3/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing) or https://esm.sh/d3
+
+// // optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
+// const svg = d3.select("#svg")
+//     .attr("width", "100%")
+//     .attr("height", "100%")
+//     // .attr("viewBox", "0 0 100% 100%")
+//     // .attr("preserveAspectRatio", "none");
+
+// let testContainer = svg.append("g");
+
+// svg.call(
+//     d3.zoom()
+//         .scaleExtent([0.1, 10])
+//         .on("zoom", (event) => testContainer.attr("transform", event.transform))
+// );
+
+// let text = testContainer.append("text")
+//     .attr("x", 50)
+//     .attr("y", 50)
+//     .text("HELLO WORLD")
+
+// let rect = testContainer.append("rect")
+//     .attr("x", 50)
+//     .attr("y", 50)
+//     .attr("width", 100)
+//     .attr("height", 100)
+//     .attr("fill", "red");
+
+// (async () => {
+//     await new Promise(resolve => setTimeout(resolve, 1500));
+//     text.transition()
+//         .duration(500)
+//         .attr("x", 200)
+//         .attr("y", 50);
+// })();
+
+
+
+
+
+
+
 
 
 
@@ -163,31 +204,33 @@ function unhighlightAllSteps() {
 // TODO: would be more robust and elegant to use a recursive function to format each variable e.g. consider nested arrays, maps, and sets
 // TODO: handles e.g. hash map with tuples as keys, which is allowed in Python but not in JavaScript?
 // TODO: Infinity -> eg ∞ / \u221E
+function formatValue(type, value, isDataStructureElement = false) {
+    switch (type) {
+        case 'array':
+            return `[${value.map(([t, v]) => formatValue(t, v, true)).join(', ')}]`;
+        case 'set':
+            return `{${[...value].map(([t, v]) => formatValue(t, v, true)).join(', ')}}`;
+        case 'map':
+            return `{${[...value].map(([[kt, k], [vt ,v]]) => `${formatValue(kt, k, true)}: ${formatValue(vt, v, true)}`).join(', ')}}`;
+        case 'string':
+            return `"${value.replace(/ /g, '\u00A0')}"`;
+        case 'float': // TODO: account for edge cases e.g. Infinity, scientific notation?
+            // value = value.toString();
+            // if (!value.includes('.')) {
+            //     value += '.0';
+            // }
+            return value.toString();
+        default:
+            return value.toString();
+    }
+}
+
 function formatCallStack(call_stack) {
     let formatted = [];
     for (let depth = 0; depth < call_stack.length; depth++) {
         const [_function, call_stack_layer] = call_stack[depth];
         for (let [name, [type, value]] of call_stack_layer) {
-            switch (type) {
-                case 'array':
-                    value = `[${value.join(', ')}]`;
-                    break;
-                case 'map':
-                    value = `{${[...value].map(([key, _value]) => `${key}: ${_value}`).join(', ')}}`;
-                    break;
-                case 'set':
-                    value = `{${[...value].join(', ')}}`;
-                    break;
-                case 'float': // TODO: account for edge cases e.g. Infinity, scientific notation?
-                    // value = value.toString();
-                    // if (!value.includes('.')) {
-                    //     value += '.0';
-                    // }
-                    break;
-                case 'string':
-                    value = value.replace(/ /g, '\u00A0');
-                    break;
-            }
+            value = formatValue(type, value);
             formatted.push(`${_function} ${depth} | ${name} : ${type} = ${value}`);
         }
     }
@@ -297,7 +340,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample4.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample11.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
@@ -463,10 +506,11 @@ async function build() {
     linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
     error = pyodide.globals.get('error');
     errorLineno = pyodide.globals.get('error_lineno');
-    return true;
     // console.log('steps:', steps); // DEBUG
     // console.log('linenoToSteps:', linenoToSteps); // DEBUG
     // console.log('error:', error); // DEBUG
+    // console.log('errorLineno:', errorLineno); // DEBUG
+    return true;
 }
 
 function setup() {
