@@ -2,3 +2,5 @@
 `npm run server` to host server \
 to just bundle editor, can add `"build-editor": "node_modules/.bin/rollup editor.mjs -f iife -o editor.bundle.js -p @rollup/plugin-node-resolve"` script \
 <!-- add `"type": "module"` to html if needed -->
+
+since moving between branches, not currently worrying about uninstalling unused node modules. later, can uninstall unused
