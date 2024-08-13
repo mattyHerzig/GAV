@@ -351,12 +351,14 @@ text {
   });
   }
   function randomizeListPositions() {
-    lists.forEach((list, index) => {
-      var x = Math.floor(Math.random() * 500);
-      var y = Math.floor(Math.random() * 500);
-      list.attr("transform", "translate(" + x + ", " + y + ")");
-    });
-  }
+  lists.forEach((list, index) => {
+    var x = Math.floor(Math.random() * 500);
+    var y = Math.floor(Math.random() * 500);
+    list.transition()
+        .duration(500) // duration of the transition in milliseconds
+        .attr("transform", "translate(" + x + ", " + y + ")");
+  });
+}
 
   function randomizeNodePositions() {
     nodes.forEach(node => {
