@@ -14,19 +14,27 @@ for array in matrix:
     for element in array:
         print(element)
 
-adj_pairs = [
-    ('a', ['b', 'c']),
-    ('b', ['a', 'c']),
-    ('c', ['a', 'b'])
-]
+# adj_pairs = [
+#     ('a', ['b', 'c']),
+#     ('b', ['a', 'c']),
+#     ('c', ['a', 'b'])
+# ]
+# adj = {}
+# for node, neighbors in adj_pairs:
+#     adj[node] = neighbors
 
-adj = {}
-for node, neighbors in adj_pairs:
-    adj[node] = neighbors
+adj = {
+    'a': ['b', 'c'],
+    'b': ['a', 'c'],
+    'c': ['a', 'b']
+}
 
 visisted = set()
 
 for node in adj:
     visisted.add(node)
-    for neighbor in adj[node]:
+    neighbors = adj[node]
+    for neighbor in neighbors:
         print(node, neighbor)
+    # for neighbor in adj[node]:
+    #     print(node, neighbor)

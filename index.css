@@ -215,7 +215,13 @@ input[type="range"]:active {
 #svg {
     flex: 1 1;
 }
-#data-structures {
+/* #svg > g {
+    overflow: visible;
+} */
+/* #svg * {
+    overflow: hidden;
+} */
+/* #data-structures {
     flex: 1 1;
 }
 #primitives {
@@ -223,7 +229,7 @@ input[type="range"]:active {
 }
 #step-through {
     flex: 1 1;
-}
+} */
 #editor-line {
     height: var(--line-height);
     background-color: #1e1e1e;
@@ -239,7 +245,7 @@ input[type="range"]:active {
     white-space: nowrap;
 } */
 #terminal {
-    flex: 0.5 1;
+    flex: 0.3 1;
     background-color: #181818;
 }
 .terminal-error {

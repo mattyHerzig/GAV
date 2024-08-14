@@ -84,6 +84,7 @@ def get_type(name, value, depth):
 # string [('char', c) for c in list(value)] ?
 # can simplify the arguments by using global variables and clear them on each tracefunc 
 #   or, by making it a nested function of tracefunc?
+#   don't need to check if primitive free var, if a data structure element?
 def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function):
     # print('name', name, 'value', value, 'depth', depth, file=sys.__stdout__) # DEBUG
     if is_freevar(name, value, freevars, data_structure_cell_id_to_name_and_currently_deepest_depth):
@@ -102,17 +103,17 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
                 primitive_cell_name_to_currently_deepest_depth[name] = depth
             else:
                 data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)] = (name, depth)
-        _type = get_type(name, value, depth)
-        match _type:
+        type = get_type(name, value, depth)
+        match type:
             case 'array':
-                return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for i, v in enumerate(value)])
+                return (type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for i, v in enumerate(value)])
             case 'set':
-                return (_type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for k in value])
+                return (type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for k in value])
             case 'map': # TODO: other stuff e.g. replace tuple paranthesis, when used as key, with square brackets?
-                return (_type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function), \
-                                 get_type_and_value(f'{name}[${f'"${k}"' if type(k).__name__ == 'str' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function)) for k, v in value.items()])
+                return (type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function), \
+                                 get_type_and_value(f'{name}[{f'"{k}"' if get_type(f'{name} key', k, depth) == 'string' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function)) for k, v in value.items()])
             case _:
-                return (_type, value) # deepcopy(value) if needed
+                return (type, value) # deepcopy(value) if needed
 
 # class TracingError(Exception):
 #     def __init__(self, message):

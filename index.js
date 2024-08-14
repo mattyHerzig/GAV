@@ -8,42 +8,147 @@ import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
 
 
-// import * as d3 from "https://cdn.jsdelivr.net/npm/d3/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing) or https://esm.sh/d3
 
-// // optimize by downloading local rather than using a cdn, if needed. see https://d3js.org/getting-started#d3-in-vanilla-html "you can load D3 from a CDN such as jsDelivr or you can download it locally" or https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails "make all the text substitutions yourself using a script or manually"
-// const svg = d3.select("#svg")
-//     .attr("width", "100%")
-//     .attr("height", "100%")
-//     // .attr("viewBox", "0 0 100% 100%")
-//     // .attr("preserveAspectRatio", "none");
 
-// let testContainer = svg.append("g");
 
-// svg.call(
-//     d3.zoom()
-//         .scaleExtent([0.1, 10])
-//         .on("zoom", (event) => testContainer.attr("transform", event.transform))
-// );
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing) or https://esm.sh/d3
+// TODO: if needed, can make resizing the visual smaller make it around the center rather than the left
+const svg = d3.select("#svg")
+    // .attr("width", "100%")
+    // .attr("height", "100%");
 
-// let text = testContainer.append("text")
-//     .attr("x", 50)
-//     .attr("y", 50)
-//     .text("HELLO WORLD")
+const container = svg.append("g")
+    .attr("width", "100%")
+    .attr("height", "100%");
 
-// let rect = testContainer.append("rect")
-//     .attr("x", 50)
-//     .attr("y", 50)
-//     .attr("width", 100)
-//     .attr("height", 100)
+const dataStructuresHeightPercentage = 50;
+const primitivesHeightPercentage = 35;
+const stepThroughHeightPercentage = 15;
+
+// Define clipping paths
+container.append("defs").append("clipPath")
+    .attr("id", "clip-dataStructures")
+    .append("rect")
+    .attr("width", `1000%`)
+    .attr("height", `${dataStructuresHeightPercentage}%`)
+    .attr("x", "0")
+    .attr("y", "0");
+
+container.append("defs").append("clipPath")
+    .attr("id", "clip-primitives")
+    .append("rect")
+    .attr("width", `1000%`)
+    .attr("height", `${primitivesHeightPercentage}%`)
+    .attr("x", "0")
+    .attr("y", `${dataStructuresHeightPercentage}%`);
+
+container.append("defs").append("clipPath")
+    .attr("id", "clip-stepThrough")
+    .append("rect")
+    .attr("width", `1000%`)
+    .attr("height", `${stepThroughHeightPercentage}%`)
+    .attr("x", "0")
+    .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`);
+
+// Append groups and apply clipping paths
+const dataStructures = container.append("g")
+    .attr("clip-path", "url(#clip-dataStructures)")
+    .attr("x", "0")
+    .attr("y", "0")
+    // .attr("transform", "translate(0, 0)");
+
+const primitives = container.append("g")
+    .attr("clip-path", "url(#clip-primitives)")
+    .attr("x", "0")
+    .attr("y", `${dataStructuresHeightPercentage}%`)
+    // .attr("transform", `translate(0, ${dataStructuresHeight})`);
+
+const stepThrough = container.append("g")
+    .attr("clip-path", "url(#clip-stepThrough)")
+    .attr("x", "0")
+    .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`)
+    // .attr("transform", `translate(0, ${dataStructuresHeight + primitivesHeight})`);
+
+// Add content to the groups as needed
+const dataStructuresRect = dataStructures.append("rect")
+    .attr("width", `1000%`)
+    .attr("height", `${dataStructuresHeightPercentage}%`)
+    .attr("fill", "rgba(255, 0, 0, 0.05)") // red with 50% opacity
+    .attr("x", "0")
+    .attr("y", "0");
+
+const primitivesRect = primitives.append("rect")
+    .attr("width", `1000%`)
+    .attr("height", `${primitivesHeightPercentage}%`)
+    .attr("fill", "rgba(0, 128, 0, 0.05)") // green with 50% opacity
+    .attr("x", "0")
+    .attr("y", `${dataStructuresHeightPercentage}%`);
+
+const stepThroughRect = stepThrough.append("rect")
+    .attr("width", `1000%`)
+    .attr("height", '20%')
+    .attr("fill", "rgba(0, 0, 255, 0.05)") // blue with 50% opacity
+    .attr("x", "0")
+    .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`);
+
+// i think it automatically made it so you can't "website zoom", or scroll to hard to back arrow browser, on visualization
+svg.call(d3.zoom()
+    // .scaleExtent([zoomScaleMin, zoomScaleMax]) // uncap if needed
+    .on("zoom", e => container.attr("transform", e.transform))
+);
+
+
+
+
+
+
+
+
+
+// let text = primitives.append("text")
+//     .attr("x", "50")
+//     .attr("y", "60%")
+//     .text("HELLO WORLD");
+
+// let rect = primitives.append("rect")
+//     .attr("x", "50")
+//     .attr("y", "60%")
+//     .attr("height", "20%")
+//     // .attr("width", "20%")
 //     .attr("fill", "red");
+
+// rect.attr("width", rect.node().getBBox().height);
 
 // (async () => {
 //     await new Promise(resolve => setTimeout(resolve, 1500));
-//     text.transition()
-//         .duration(500)
-//         .attr("x", 200)
-//         .attr("y", 50);
+//     let isLeft = true;
+//     const moveText = () => {
+//         if (isLeft) {
+//             text.transition()
+//                 .duration(500)
+//                 .attr("x", "50")
+//                 .attr("y", "60%");
+//         } else {
+//             text.transition()
+//                 .duration(500)
+//                 .attr("x", "200")
+//                 .attr("y", "60%");
+//         }
+//         isLeft = !isLeft;
+//         setTimeout(moveText, 1000);
+//     };
+//     moveText();
 // })();
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -80,6 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //     buttons.style.left = `${leftPosition}px`;
     // }
 
+    //TODO: make it clip to the original?
     function resize(e) {
         const clientXPercentage = ((e.clientX - xOffset) / window.innerWidth) * 100;
         document.documentElement.style.setProperty('--editor-width', `${clientXPercentage}vw`);
@@ -290,9 +396,10 @@ function stepRight() {
 stepSliderLeft.addEventListener('click', () => stepLeft());
 
 // TODO: additionally, when you keyboard navigable to the stepSlider using tab, you can use the left and right arrow keys which should trigger this event instead of input event listener?
+//   also, allow arrow keys to work without having to navigate to the slider?
 stepSliderRight.addEventListener('click', () => stepRight()); 
 
-const dataStructures = document.getElementById('data-structures'); // TODO
+// const dataStructures = document.getElementById('data-structures'); // TODO
 // const primitives = document.getElementById('primitives');
 // const stepThrough = document.getElementById('step-through');
 const editorLine = document.getElementById('editor-line');
@@ -314,7 +421,7 @@ function reset() {
     stepSliderRight.setAttribute('disabled', '');
     mouseListener.dispose();
     unhighlightLines();
-    dataStructures.innerHTML = '';
+    // dataStructures.innerHTML = '';
     terminal.innerText = '';
     stopPlaying = true;
     unhighlightAllSteps();
@@ -679,7 +786,7 @@ function unmirrorLine() {
 function processStep(step) { // if needed, can replace spaces with non-breaking spaces earlier. and, with variables
     const [lineno, call_stack, node_types, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
-    dataStructures.innerText = formatCallStack(call_stack);
+    // dataStructures.innerText = formatCallStack(call_stack);
     if (stdout.length > 0) { // for consistency with compile-time errors
     terminal.innerText = `\n\u00A0\u00A0\u00A0${stdout.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`; // TODO: better padding formatting
     }
