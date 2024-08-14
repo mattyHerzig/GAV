@@ -209,9 +209,9 @@ function formatValue(type, value, isDataStructureElement = false) {
         case 'array':
             return `[${value.map(([t, v]) => formatValue(t, v, true)).join(', ')}]`;
         case 'set':
-            return `{${[...value].map(([t, v]) => formatValue(t, v, true)).join(', ')}}`;
+            return `{${value.map(([t, v]) => formatValue(t, v, true)).join(', ')}}`;
         case 'map':
-            return `{${[...value].map(([[kt, k], [vt ,v]]) => `${formatValue(kt, k, true)}: ${formatValue(vt, v, true)}`).join(', ')}}`;
+            return `{${value.map(([[kt, k], [vt ,v]]) => `${formatValue(kt, k, true)}: ${formatValue(vt, v, true)}`).join(', ')}}`;
         case 'string':
             return `"${value.replace(/ /g, '\u00A0')}"`;
         case 'float': // TODO: account for edge cases e.g. Infinity, scientific notation?
@@ -486,7 +486,6 @@ async function build() {
         // async processes e.g. play button state change, unlike pyodide.runPython(buildCode);. If better (e.g. even less latency), can go back to using a web worker
         await pyodide.runPythonAsync(buildCode);    
     } catch(e) {
-        // console.log(e); // DEBUG
         error = formatTraceback(e.toString());
         errorLineno = extractErrorLinenoFromError(error); // Can alternatively try extractig from e, rather than parsing formatted error
         // console.log(e, error, errorLineno); // DEBUG

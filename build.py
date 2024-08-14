@@ -8,7 +8,7 @@ import ast
 import tokenize
 import io
 import traceback
-from copy import deepcopy
+# from copy import deepcopy
 
 # lines = [''] + code.split('\n') # 1-indexed
 
@@ -102,17 +102,17 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
                 primitive_cell_name_to_currently_deepest_depth[name] = depth
             else:
                 data_structure_cell_id_to_name_and_currently_deepest_depth[id(value)] = (name, depth)
-        type = get_type(name, value, depth)
-        match type:
+        _type = get_type(name, value, depth)
+        match _type:
             case 'array':
-                return (type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for i, v in enumerate(value)])
+                return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for i, v in enumerate(value)])
             case 'set':
-                return (type, {get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for k in value})
+                return (_type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for k in value])
             case 'map': # TODO: other stuff e.g. replace tuple paranthesis, when used as key, with square brackets?
-                return (type, {get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function): \
-                               get_type_and_value(f'{name}[${f'"${k}"' if type(k).__str__ == 'str' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function) for k, v in value.items()})
+                return (_type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function), \
+                                 get_type_and_value(f'{name}[${f'"${k}"' if type(k).__name__ == 'str' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_currently_deepest_depth, data_structure_cell_id_to_name_and_currently_deepest_depth, call_stack, function)) for k, v in value.items()])
             case _:
-                return (type, deepcopy(value))
+                return (_type, value) # deepcopy(value) if needed
 
 # class TracingError(Exception):
 #     def __init__(self, message):
@@ -159,6 +159,7 @@ def tracefunc(frame, event, arg):
 
 # simplification of the traceback. Can revert to unsimplified and rigorous if needed
 def format_traceback(tb):
+    # return tb # DEBUG
     filtered_tb_lines = []
     tb_lines = tb.split('\n')
     for line in tb_lines:
