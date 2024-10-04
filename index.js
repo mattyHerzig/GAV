@@ -13,7 +13,7 @@ import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3/+esm"; // (https://d3js.org/getting-started#d3-in-vanilla-html) or https://unpkg.com/d3?module (https://stackoverflow.com/questions/48471651/es6-module-import-of-d3-4-x-fails) or https://d3js.org/d3.v4.min.js (Daryl testing) or https://esm.sh/d3
 // TODO: if needed, can make resizing the visual smaller make it around the center rather than the left
-const svg = d3.select("#svg")
+const svg = d3.select("#svg");
     // .attr("width", "100%")
     // .attr("height", "100%");
 
@@ -21,15 +21,15 @@ const container = svg.append("g")
     .attr("width", "100%")
     .attr("height", "100%");
 
-const dataStructuresHeightPercentage = 50;
-const primitivesHeightPercentage = 35;
-const stepThroughHeightPercentage = 15;
+const dataStructuresHeightPercentage = 30; // before presentation: 50
+const primitivesHeightPercentage = 50; // before presentation: 35
+const stepThroughHeightPercentage = 20; // before presentation: 15
 
 // Define clipping paths
 container.append("defs").append("clipPath")
     .attr("id", "clip-dataStructures")
     .append("rect")
-    .attr("width", `1000%`)
+    .attr("width", `10000px`)
     .attr("height", `${dataStructuresHeightPercentage}%`)
     .attr("x", "0")
     .attr("y", "0");
@@ -37,7 +37,7 @@ container.append("defs").append("clipPath")
 container.append("defs").append("clipPath")
     .attr("id", "clip-primitives")
     .append("rect")
-    .attr("width", `1000%`)
+    .attr("width", `10000px`)
     .attr("height", `${primitivesHeightPercentage}%`)
     .attr("x", "0")
     .attr("y", `${dataStructuresHeightPercentage}%`);
@@ -45,7 +45,7 @@ container.append("defs").append("clipPath")
 container.append("defs").append("clipPath")
     .attr("id", "clip-stepThrough")
     .append("rect")
-    .attr("width", `1000%`)
+    .attr("width", `10000px`)
     .attr("height", `${stepThroughHeightPercentage}%`)
     .attr("x", "0")
     .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`);
@@ -69,35 +69,176 @@ const stepThrough = container.append("g")
     .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`)
     // .attr("transform", `translate(0, ${dataStructuresHeight + primitivesHeight})`);
 
-// Add content to the groups as needed
-const dataStructuresRect = dataStructures.append("rect")
-    .attr("width", `1000%`)
-    .attr("height", `${dataStructuresHeightPercentage}%`)
-    .attr("fill", "rgba(255, 0, 0, 0.05)") // red with 50% opacity
-    .attr("x", "0")
-    .attr("y", "0");
+// Add colored sections to the groups if needed
+// const dataStructuresRect = dataStructures.append("rect")
+//     .attr("width", `10000px`)
+//     .attr("height", `${dataStructuresHeightPercentage}%`)
+//     .attr("fill", "rgba(255, 0, 0, 0.05)") // red with 50% opacity
+//     .attr("x", "0")
+//     .attr("y", "0");
 
-const primitivesRect = primitives.append("rect")
-    .attr("width", `1000%`)
-    .attr("height", `${primitivesHeightPercentage}%`)
-    .attr("fill", "rgba(0, 128, 0, 0.05)") // green with 50% opacity
-    .attr("x", "0")
-    .attr("y", `${dataStructuresHeightPercentage}%`);
+// const primitivesRect = primitives.append("rect")
+//     .attr("width", `10000px`)
+//     .attr("height", `${primitivesHeightPercentage}%`)
+//     .attr("fill", "rgba(0, 128, 0, 0.05)") // green with 50% opacity
+//     .attr("x", "0")
+//     .attr("y", `${dataStructuresHeightPercentage}%`);
 
-const stepThroughRect = stepThrough.append("rect")
-    .attr("width", `1000%`)
-    .attr("height", '20%')
-    .attr("fill", "rgba(0, 0, 255, 0.05)") // blue with 50% opacity
-    .attr("x", "0")
-    .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`);
+// const stepThroughRect = stepThrough.append("rect")
+//     .attr("width", `10000px`)
+//     .attr("height", `${stepThroughHeightPercentage}%`)
+//     .attr("fill", "rgba(0, 0, 255, 0.05)") // blue with 50% opacity
+//     .attr("x", "0")
+//     .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`);
 
 // i think it automatically made it so you can't "website zoom", or scroll to hard to back arrow browser, on visualization
 svg.call(d3.zoom()
-    // .scaleExtent([zoomScaleMin, zoomScaleMax]) // uncap if needed
+    .scaleExtent([0.1, 6])
     .on("zoom", e => container.attr("transform", e.transform))
 );
 
 
+
+
+
+
+
+
+
+
+// later if needed, can make position based on percentage for more responsive design
+// console.log('lastBox', lastBox);
+// console.log('lastBox.empty()', lastBox.empty());
+// if (!lastBox.empty()) {
+//     console.log('lastBox.node().getBBox().x', lastBox.node().getBBox().x);
+//     console.log('lastBox.node().getBBox().width', lastBox.node().getBBox().width);
+// }
+// console.log('primitives.node().getBBox().width', primitives.node().getBBox().width);
+// const rightPercentage = 5 + (lastBox.empty() ? 0 : ((lastBox.node().getBBox().x + lastBox.node().getBBox().width) / primitives.node().getBBox().width * 100));
+
+const boxWidth = "150px"; // before presentation: "140px"
+const fontSizeHeight = 13; // before presentation: 13
+
+// TODO: convert all this styling to CSS?
+function drawCallStackDepth(_function, depth, callStackDepth, cellVars, cellVarToNameTd) {
+    const lastBox = primitives.select(".call-stack-depth:last-of-type");
+    const x = 10 + (lastBox.empty() ? 0 : lastBox.node().getBBox().x + lastBox.node().getBBox().width);
+    const group = primitives.append("g")
+        .attr("class", "call-stack-depth");
+
+    // const functionText = group.append("foreignObject")
+    //     .attr("x", x)
+    //     .attr("y", `${dataStructuresHeightPercentage /*+ 4*/}%`)
+    //     .attr("width", boxWidth)
+    //     .attr("height", "1em") // Adjust height as needed
+    //     .append("xhtml:div")
+    //         .style("width", "100%")
+    //         .style("white-space", "nowrap")
+    //         .style("overflow-x", "auto")
+    //         .style("text-overflow", "ellipsis")
+    //         .style("color", "white")
+    //         .text(_function)
+    //         .on("wheel", function(event) {
+    //             // TODO: only stop propagation if there's overflow?
+    //             event.stopPropagation(); // Prevent zooming when scrolling inside the foreignObject
+    //         }, { passive: true });
+    
+    // const depthText = functionText.append("span")
+    //     .text(depth)
+    //     .style('font-size', '.7em')
+    //     .style("margin-left", ".2ch")
+    //     .style("vertical-align", ".3em")
+    //     .style("display", "inline-block")
+    //     .style("white-space", "nowrap");
+
+    const functionText = group.append("text")
+        .attr("fill", "white")
+        .attr("x", x)
+        .attr("y", `${dataStructuresHeightPercentage + 4}%`)
+        .text(_function)
+        .append("tspan")
+            .text(depth)
+            .style('font-size', '.7em')
+            .attr("dx", ".2ch")
+            .attr("dy", ".3em");
+
+    const box = group.append("rect")
+        .attr("x", x)
+        .attr("y", `${dataStructuresHeightPercentage + 5}%`)
+        .attr("width", boxWidth)
+        .attr("height", `${primitivesHeightPercentage - 15}%`)
+        .attr("fill", "rgb(80, 80, 80)");
+
+    const foreignObject = group.append("foreignObject")
+        .attr("x", x)
+        .attr("y", `${dataStructuresHeightPercentage + 5}%`)
+        .attr("width", boxWidth)
+        .attr("height", `${primitivesHeightPercentage - 15}%`);
+
+        const div = foreignObject.append("xhtml:div")
+            .style("overflow", "auto")
+            .style("height", "100%")
+            .on("wheel", function(event) {
+                // TODO: only stop propagation if there's overflow?
+                event.stopPropagation(); // Prevent zooming when scrolling inside the foreignObject
+            }, { passive: true });
+        
+        // Create a table element
+        const table = div.append("table")
+            .style("padding", "5px");
+            // .style("width", "100%")
+            // .style("border-collapse", "collapse");
+        
+        // Append rows to the table for each name and value pair
+        for (let [name, [type, value]] of callStackDepth) {
+            const row = table.append("tr");
+        
+            // Append name cell (right-aligned)
+            const nameTd = row.append("td")
+                .style("text-align", "right")
+                .style("padding-right", "8px")
+                .text(name);
+            
+            const valueTd = row.append("td")
+                
+            const valueSpan = valueTd.append("span")
+                .style("padding-inline", "2px")
+                .style("border-left", "1px solid gray")
+                .style("border-bottom", "1px solid gray");
+            
+                // Append value cell (left-aligned)
+            if (type === 'free')  {
+                const cellVarNameTd = cellVarToNameTd.get(value);
+                if (cellVarNameTd) {
+                    // TODO: draw arrow from cellVarNameTd to nameTd
+                }
+            } else {
+                value = formatValue(type, value);
+                valueSpan
+                    .style("text-align", "left")
+                    .text(value);
+                if (cellVars.has(`${depth} ${name}`)) {
+                    cellVarToNameTd.set(`${depth} ${name}`, nameTd);
+                }
+            }
+        } 
+        
+        // setTimeout(() => {
+        //     div.node().scrollLeft = table.select("tr").select("td:first-child").node().offsetWidth - (div.node().clientWidth / 2);
+        // }, 0);
+}
+
+function drawCallStack(callStack, cellVars) {
+    const cellVarToNameTd = new Map();
+    for (let depth = 0; depth < callStack.length; depth++) {
+        const [_function, callStackDepth] = callStack[depth];
+        drawCallStackDepth(_function, depth, callStackDepth, cellVars, cellVarToNameTd);
+    }
+}
+
+function eraseCallStack() {
+    primitives.selectAll(".call-stack-depth").remove();
+}
 
 
 
@@ -318,7 +459,7 @@ function formatValue(type, value, isDataStructureElement = false) {
             return `{${value.map(([t, v]) => formatValue(t, v, true)).join(', ')}}`;
         case 'map':
             return `{${value.map(([[kt, k], [vt ,v]]) => `${formatValue(kt, k, true)}: ${formatValue(vt, v, true)}`).join(', ')}}`;
-        case 'string':
+        case 'string': // TODO: simply do str() in python?
             return `"${value.replace(/ /g, '\u00A0')}"`;
         case 'float': // TODO: account for edge cases e.g. Infinity, scientific notation?
             // value = value.toString();
@@ -331,11 +472,11 @@ function formatValue(type, value, isDataStructureElement = false) {
     }
 }
 
-function formatCallStack(call_stack) {
+function formatCallStack(callStack) {
     let formatted = [];
-    for (let depth = 0; depth < call_stack.length; depth++) {
-        const [_function, call_stack_layer] = call_stack[depth];
-        for (let [name, [type, value]] of call_stack_layer) {
+    for (let depth = 0; depth < callStack.length; depth++) {
+        const [_function, callStackDepth] = callStack[depth];
+        for (let [name, [type, value]] of callStackDepth) {
             value = formatValue(type, value);
             formatted.push(`${_function} ${depth} | ${name} : ${type} = ${value}`);
         }
@@ -421,7 +562,7 @@ function reset() {
     stepSliderRight.setAttribute('disabled', '');
     mouseListener.dispose();
     unhighlightLines();
-    // dataStructures.innerHTML = '';
+    eraseCallStack(); // dataStructures.innerHTML = '';
     terminal.innerText = '';
     stopPlaying = true;
     unhighlightAllSteps();
@@ -447,7 +588,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample11.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample12.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
@@ -468,6 +609,8 @@ await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute wh
 // let lines;
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
+let resolveEditorLoaded;
+const editorLoaded = new Promise(resolve => resolveEditorLoaded = resolve);
 let editorLineEditor;
 let editorLoading = document.getElementById('editor-loading');
 require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
@@ -508,7 +651,6 @@ require(['vs/editor/editor.main'], async () => {
         // renderLineHighlight: 'none',
         // automaticLayout: true,
     });
-    editorLoading.remove();
     // console.timeEnd('editor');
     editor.getModel().onDidChangeContent((e) => {
         // TODO: ask the user for confirmation to reset, "don't tell me again"
@@ -517,7 +659,6 @@ require(['vs/editor/editor.main'], async () => {
             reset();
         }
     });
-
     // switch between .children array or nth-child selection if needed
     // scrolling removes the earlier lines...
     // linenos = document.querySelector("#editor div.margin-view-overlays"); // .children
@@ -546,6 +687,8 @@ require(['vs/editor/editor.main'], async () => {
         // cursorBlinking: 'hidden', // Hide the cursor
         // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
     });
+    editorLoading.remove();
+    resolveEditorLoaded();
 });
 
 let steps, linenoToSteps, error, errorLineno;
@@ -583,7 +726,6 @@ function extractErrorLinenoFromError(error) {
 }
 
 async function build() {
-    setPlayButtonState(playButtonState.Building);
     unhighlightLines();
     terminal.innerText = '';
     await pyodidePromise;
@@ -603,7 +745,6 @@ async function build() {
         terminalError.classList.add('terminal-error');
         terminalError.innerText = `\n\u00A0\u00A0\u00A0${error.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`;
         terminal.appendChild(terminalError);
-        setPlayButtonState(playButtonState.Build);
         return false;
     } finally {
         // await pyodide.runPythonAsync('clear_collections()'); // alternatively, can look into restarting pyodide completely e.g. https://github.com/pyodide/pyodide/issues/703
@@ -620,13 +761,14 @@ async function build() {
 }
 
 function setup() {
-    setStepSliderValue(getStepSliderMin());
+    terminal.innerText = '';
     setStepSliderMax(steps.length - 1);
+    setStepSliderValue(errorLineno > 0 ? getStepSliderMax() : getStepSliderMin());    
+    processStep(getStepSliderValue());
     stepSlider.removeAttribute('disabled');
     stepSliderLeft.removeAttribute('disabled');
     stepSliderRight.removeAttribute('disabled');
     document.documentElement.style.setProperty('--step-highlight-width', `max(1px, 100% / ${getStepSliderMax() - getStepSliderMin() + 1})`); // TODO: am i tripping, or are these different widths
-    processStep(getStepSliderValue());
     highlightAllLineno('cursor-pointer');
     mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
         if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
@@ -645,7 +787,6 @@ function setup() {
             }
         }
     });
-    terminal.innerText = '';
     setPlayButtonState(playButtonState.Play);
 }
 
@@ -784,12 +925,13 @@ function unmirrorLine() {
 }
 
 function processStep(step) { // if needed, can replace spaces with non-breaking spaces earlier. and, with variables
-    const [lineno, call_stack, node_types, stdout] = steps[step];
+    const [lineno, callStack, cellVars, stdout] = steps[step];
     // console.log(`Line ${lineno}:\n└─ Call Stack:`, call_stack, '\n└─ AST Node Types:', node_types, '\n└─ Stdout:', stdout);
-    // dataStructures.innerText = formatCallStack(call_stack);
-    if (stdout.length > 0) { // for consistency with compile-time errors
-    terminal.innerText = `\n\u00A0\u00A0\u00A0${stdout.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}`; // TODO: better padding formatting
-    }
+    eraseCallStack();
+    drawCallStack(callStack, cellVars); // dataStructures.innerText = formatCallStack(call_stack);
+    // for consistency with compile-time errors
+    // TODO: better padding formatting
+    terminal.innerText = stdout.length > 0 ? `\n\u00A0\u00A0\u00A0${stdout.replace(/ /g, '\u00A0').split('\n').join('\n\u00A0\u00A0\u00A0')}` : '';
     unhighlightLines('line-highlight');
     unhighlightLines('prev-line-highlight');
     if (step == getStepSliderMax() && errorLineno > 0) { // TODO: red
@@ -931,8 +1073,12 @@ function linenoIsHighlighted(lineno, lineNumberClassName) {
 playButton.addEventListener('click', async () => {
     switch (getPlayButtonState()) {
         case playButtonState.Build:
+            setPlayButtonState(playButtonState.Building);
+            await editorLoaded;
             if (await build()) {
                 setup();
+            } else {
+                setPlayButtonState(playButtonState.Build);
             }
             break;
         case playButtonState.Building: // TODO: look into making cancelable if needed

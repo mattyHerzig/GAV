@@ -268,3 +268,6 @@ input[type="range"]:active {
 .cursor-pointer {
     cursor: pointer !important;
 }
+/* .call-stack-depth > box {
+    overflow: scroll;
+} */
