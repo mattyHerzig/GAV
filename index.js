@@ -21,16 +21,16 @@ const container = svg.append("g")
     .attr("width", "100%")
     .attr("height", "100%");
 
-const dataStructuresHeightPercentage = 30; // before presentation: 50
-const primitivesHeightPercentage = 50; // before presentation: 35
-const stepThroughHeightPercentage = 20; // before presentation: 15
+const DATA_STRUCTURES_HEIGHT_PERCENTAGE = 50;
+const PRIMITIVES_HEIGHT_PERCENTAGE = 35;
+const STEP_THROUGH_HEIGHT_PERCENTAGE = 15;
 
 // Define clipping paths
 container.append("defs").append("clipPath")
     .attr("id", "clip-dataStructures")
     .append("rect")
     .attr("width", `10000px`)
-    .attr("height", `${dataStructuresHeightPercentage}%`)
+    .attr("height", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE}%`)
     .attr("x", "0")
     .attr("y", "0");
 
@@ -38,17 +38,17 @@ container.append("defs").append("clipPath")
     .attr("id", "clip-primitives")
     .append("rect")
     .attr("width", `10000px`)
-    .attr("height", `${primitivesHeightPercentage}%`)
+    .attr("height", `${PRIMITIVES_HEIGHT_PERCENTAGE}%`)
     .attr("x", "0")
-    .attr("y", `${dataStructuresHeightPercentage}%`);
+    .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE}%`);
 
 container.append("defs").append("clipPath")
     .attr("id", "clip-stepThrough")
     .append("rect")
     .attr("width", `10000px`)
-    .attr("height", `${stepThroughHeightPercentage}%`)
+    .attr("height", `${STEP_THROUGH_HEIGHT_PERCENTAGE}%`)
     .attr("x", "0")
-    .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`);
+    .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE + PRIMITIVES_HEIGHT_PERCENTAGE}%`);
 
 // Append groups and apply clipping paths
 const dataStructures = container.append("g")
@@ -60,36 +60,36 @@ const dataStructures = container.append("g")
 const primitives = container.append("g")
     .attr("clip-path", "url(#clip-primitives)")
     .attr("x", "0")
-    .attr("y", `${dataStructuresHeightPercentage}%`)
+    .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE}%`)
     // .attr("transform", `translate(0, ${dataStructuresHeight})`);
 
 const stepThrough = container.append("g")
     .attr("clip-path", "url(#clip-stepThrough)")
     .attr("x", "0")
-    .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`)
+    .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE + PRIMITIVES_HEIGHT_PERCENTAGE}%`)
     // .attr("transform", `translate(0, ${dataStructuresHeight + primitivesHeight})`);
 
 // Add colored sections to the groups if needed
-// const dataStructuresRect = dataStructures.append("rect")
-//     .attr("width", `10000px`)
-//     .attr("height", `${dataStructuresHeightPercentage}%`)
-//     .attr("fill", "rgba(255, 0, 0, 0.05)") // red with 50% opacity
-//     .attr("x", "0")
-//     .attr("y", "0");
+const dataStructuresRect = dataStructures.append("rect")
+    .attr("width", `10000px`)
+    .attr("height", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE}%`)
+    .attr("fill", "rgba(255, 0, 0, 0.05)") // red with 50% opacity
+    .attr("x", "0")
+    .attr("y", "0");
 
-// const primitivesRect = primitives.append("rect")
-//     .attr("width", `10000px`)
-//     .attr("height", `${primitivesHeightPercentage}%`)
-//     .attr("fill", "rgba(0, 128, 0, 0.05)") // green with 50% opacity
-//     .attr("x", "0")
-//     .attr("y", `${dataStructuresHeightPercentage}%`);
+const primitivesRect = primitives.append("rect")
+    .attr("width", `10000px`)
+    .attr("height", `${PRIMITIVES_HEIGHT_PERCENTAGE}%`)
+    .attr("fill", "rgba(0, 128, 0, 0.05)") // green with 50% opacity
+    .attr("x", "0")
+    .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE}%`);
 
-// const stepThroughRect = stepThrough.append("rect")
-//     .attr("width", `10000px`)
-//     .attr("height", `${stepThroughHeightPercentage}%`)
-//     .attr("fill", "rgba(0, 0, 255, 0.05)") // blue with 50% opacity
-//     .attr("x", "0")
-//     .attr("y", `${dataStructuresHeightPercentage + primitivesHeightPercentage}%`);
+const stepThroughRect = stepThrough.append("rect")
+    .attr("width", `10000px`)
+    .attr("height", `${STEP_THROUGH_HEIGHT_PERCENTAGE}%`)
+    .attr("fill", "rgba(0, 0, 255, 0.05)") // blue with 50% opacity
+    .attr("x", "0")
+    .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE + PRIMITIVES_HEIGHT_PERCENTAGE}%`);
 
 // i think it automatically made it so you can't "website zoom", or scroll to hard to back arrow browser, on visualization
 svg.call(d3.zoom()
@@ -116,15 +116,95 @@ svg.call(d3.zoom()
 // console.log('primitives.node().getBBox().width', primitives.node().getBBox().width);
 // const rightPercentage = 5 + (lastBox.empty() ? 0 : ((lastBox.node().getBBox().x + lastBox.node().getBBox().width) / primitives.node().getBBox().width * 100));
 
-const boxWidth = "150px"; // before presentation: "140px"
-const fontSizeHeight = 13; // before presentation: 13
+function drawOverflowableText(group, x, y, width, height, color = false, center = false, text = "") {
+    if (color) {
+        const box = group.append("rect")
+            .attr("x", x)
+            .attr("y", y)
+            .attr("width", width)
+            .attr("height", height)
+            .attr("fill", "rgb(80, 80, 80)");
+    }
+
+    const foreignObject = group.append("foreignObject")
+        .attr("x", x)
+        .attr("y", y)
+        .attr("width", width)
+        .attr("height", height);
+
+    const div = foreignObject.append("xhtml:div")
+        .style("overflow", "auto")
+        .style("height", "100%")
+        .on("wheel", function (event) {
+            event.stopPropagation();
+        }, { passive: true });
+    
+    if (center) {
+        div.style("display", "flex")
+            .style("align-items", "center")
+            .style("justify-content", "center");
+    }
+
+    if (text) {
+        div.text(text);
+    }
+    
+    return div;
+}
+
+const dataStructureTypes = new Set([ // TODO: uncomment when implemented
+    'array',
+    // 'set',
+    // 'map'
+]);
+
+const ELEMENT_WIDTH = 50; // px
+const ELEMENT_HEIGHT = ELEMENT_WIDTH; // px
+const ELEMENT_GAP = 10; // px
+const ELEMENT_TOP_MARGIN = 50; // px
+
+function drawDataStructure(_function, depth, name, type, value) {
+    // TODO: implement special visualization for data structures
+    // TODO: do cellVarToNameTd esque logic here (have more robust typing e.g. free data structure vs. free primitive?)
+    const lastBoundary = dataStructures.select(".data-structure-boundary:last-of-type");
+    const x = ELEMENT_GAP + (lastBoundary.empty() ? 0 : lastBoundary.node().getBBox().x + lastBoundary.node().getBBox().width);
+    const group = dataStructures.append("g")
+        .attr("class", "data-structure-boundary");
+    
+    switch (type) {
+        case 'array':
+            drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            for (let [index, [elementType, elementValue]] of value.entries()) {
+                const elementX = x + (index * (ELEMENT_WIDTH + ELEMENT_GAP)); // px
+                drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1em", false, true, `[${index}]`);
+                if (dataStructureTypes.has(elementType)) {
+                    drawDataStructure(_function, depth, `${name}[${index}]`, elementType, elementValue);
+                } else { // Primitive type
+                    elementValue = formatValue(elementType, elementValue);
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, elementValue);
+                }
+            }
+            break;
+        case 'set': 
+
+            break;
+        case 'map': 
+
+            break;
+    }
+}
+
+const BOX_WIDTH = 140; // px
+const BOX_GAP = 10; // px
+const BOX_TOP_MARGIN = 5; // %
+// const fontSizeHeight = 13;
 
 // TODO: convert all this styling to CSS?
-function drawCallStackDepth(_function, depth, callStackDepth, cellVars, cellVarToNameTd) {
-    const lastBox = primitives.select(".call-stack-depth:last-of-type");
-    const x = 10 + (lastBox.empty() ? 0 : lastBox.node().getBBox().x + lastBox.node().getBBox().width);
+function drawCallStackFrame(_function, depth, callStackFrame, cellVars, cellVarToNameTd) {
+    const lastBox = primitives.select(".call-stack-frame:last-of-type");
+    const x = BOX_GAP + (lastBox.empty() ? 0 : lastBox.node().getBBox().x + lastBox.node().getBBox().width);
     const group = primitives.append("g")
-        .attr("class", "call-stack-depth");
+        .attr("class", "call-stack-frame");
 
     // const functionText = group.append("foreignObject")
     //     .attr("x", x)
@@ -151,10 +231,10 @@ function drawCallStackDepth(_function, depth, callStackDepth, cellVars, cellVarT
     //     .style("display", "inline-block")
     //     .style("white-space", "nowrap");
 
-    const functionText = group.append("text")
+    const functionText = group.append("text") // TODO: account for long names e.g. foreignObject with overflow-x: auto
         .attr("fill", "white")
         .attr("x", x)
-        .attr("y", `${dataStructuresHeightPercentage + 4}%`)
+        .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE + BOX_TOP_MARGIN - 1}%`)
         .text(_function)
         .append("tspan")
             .text(depth)
@@ -164,35 +244,38 @@ function drawCallStackDepth(_function, depth, callStackDepth, cellVars, cellVarT
 
     const box = group.append("rect")
         .attr("x", x)
-        .attr("y", `${dataStructuresHeightPercentage + 5}%`)
-        .attr("width", boxWidth)
-        .attr("height", `${primitivesHeightPercentage - 15}%`)
+        .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE + BOX_TOP_MARGIN}%`)
+        .attr("width", BOX_WIDTH)
+        .attr("height", `${PRIMITIVES_HEIGHT_PERCENTAGE - 15}%`)
         .attr("fill", "rgb(80, 80, 80)");
 
     const foreignObject = group.append("foreignObject")
         .attr("x", x)
-        .attr("y", `${dataStructuresHeightPercentage + 5}%`)
-        .attr("width", boxWidth)
-        .attr("height", `${primitivesHeightPercentage - 15}%`);
+        .attr("y", `${DATA_STRUCTURES_HEIGHT_PERCENTAGE + BOX_TOP_MARGIN}%`)
+        .attr("width", BOX_WIDTH)
+        .attr("height", `${PRIMITIVES_HEIGHT_PERCENTAGE - 15}%`);
 
-        const div = foreignObject.append("xhtml:div")
-            .style("overflow", "auto")
-            .style("height", "100%")
-            .on("wheel", function(event) {
-                // TODO: only stop propagation if there's overflow?
-                event.stopPropagation(); // Prevent zooming when scrolling inside the foreignObject
-            }, { passive: true });
-        
-        // Create a table element
-        const table = div.append("table")
-            .style("padding", "5px");
-            // .style("width", "100%")
-            // .style("border-collapse", "collapse");
-        
-        // Append rows to the table for each name and value pair
-        for (let [name, [type, value]] of callStackDepth) {
+    const div = foreignObject.append("xhtml:div")
+        .style("overflow", "auto")
+        .style("height", "100%")
+        .on("wheel", function(event) {
+            // TODO: only stop propagation if there's overflow? Otherwise, could be annoying
+            event.stopPropagation(); // Prevent zooming when scrolling inside the foreignObject
+        }, { passive: true });
+    
+    // Create a table element
+    const table = div.append("table")
+        .style("padding", "5px");
+        // .style("width", "100%")
+        // .style("border-collapse", "collapse");
+    
+    // Append rows to the table for each name and value pair
+    for (let [name, [type, value]] of callStackFrame) {
+        if (dataStructureTypes.has(type)) {
+            drawDataStructure(_function, depth, name, type, value);
+        } else { // Primitive type
             const row = table.append("tr");
-        
+    
             // Append name cell (right-aligned)
             const nameTd = row.append("td")
                 .style("text-align", "right")
@@ -221,23 +304,25 @@ function drawCallStackDepth(_function, depth, callStackDepth, cellVars, cellVarT
                     cellVarToNameTd.set(`${depth} ${name}`, nameTd);
                 }
             }
-        } 
-        
-        // setTimeout(() => {
-        //     div.node().scrollLeft = table.select("tr").select("td:first-child").node().offsetWidth - (div.node().clientWidth / 2);
-        // }, 0);
+        }
+    }
+    
+    // setTimeout(() => {
+    //     div.node().scrollLeft = table.select("tr").select("td:first-child").node().offsetWidth - (div.node().clientWidth / 2);
+    // }, 0);
 }
 
 function drawCallStack(callStack, cellVars) {
     const cellVarToNameTd = new Map();
     for (let depth = 0; depth < callStack.length; depth++) {
-        const [_function, callStackDepth] = callStack[depth];
-        drawCallStackDepth(_function, depth, callStackDepth, cellVars, cellVarToNameTd);
+        const [_function, callStackFrame] = callStack[depth];
+        drawCallStackFrame(_function, depth, callStackFrame, cellVars, cellVarToNameTd);
     }
 }
 
 function eraseCallStack() {
-    primitives.selectAll(".call-stack-depth").remove();
+    dataStructures.selectAll(".data-structure-boundary").remove();
+    primitives.selectAll(".call-stack-frame").remove();
 }
 
 
@@ -472,17 +557,17 @@ function formatValue(type, value, isDataStructureElement = false) {
     }
 }
 
-function formatCallStack(callStack) {
-    let formatted = [];
-    for (let depth = 0; depth < callStack.length; depth++) {
-        const [_function, callStackDepth] = callStack[depth];
-        for (let [name, [type, value]] of callStackDepth) {
-            value = formatValue(type, value);
-            formatted.push(`${_function} ${depth} | ${name} : ${type} = ${value}`);
-        }
-    }
-    return '\n\n\n\u00A0\u00A0\u00A0' + formatted.join('\n\u00A0\u00A0\u00A0');
-}
+// function formatCallStack(callStack) {
+//     let formatted = [];
+//     for (let depth = 0; depth < callStack.length; depth++) {
+//         const [_function, callStackDepth] = callStack[depth];
+//         for (let [name, [type, value]] of callStackDepth) {
+//             value = formatValue(type, value);
+//             formatted.push(`${_function} ${depth} | ${name} : ${type} = ${value}`);
+//         }
+//     }
+//     return '\n\n\n\u00A0\u00A0\u00A0' + formatted.join('\n\u00A0\u00A0\u00A0');
+// }
 
 let wait = 300;
 
@@ -588,7 +673,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample12.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample14.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
