@@ -35,7 +35,9 @@ python_type_to_type = { # type(value).__name__ : type
     'tuple': 'array', # or keep as tuple and use paranthesis where needed?
     'dict': 'map',
     'str': 'string',
-    'deque': 'queue' 
+    'deque': 'queue',
+
+    'NoneType': 'null', # TODO: ?
 }
 
 # alternatively, types to include

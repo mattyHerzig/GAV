@@ -587,6 +587,7 @@ function unhighlightAllSteps() {
 // TODO: handles e.g. hash map with tuples as keys, which is allowed in Python but not in JavaScript?
 // TODO: Infinity -> eg ∞ / \u221E
 // TODO: true -> True, or nah? 
+// TODO: None -> null, or nah?
 function formatValue(type, value, isDataStructureElement = false) {
     switch (type) {
         case 'array':
@@ -603,6 +604,8 @@ function formatValue(type, value, isDataStructureElement = false) {
             //     value += '.0';
             // }
             return value.toString();
+        case 'null':
+            return 'null';
         default:
             return value.toString();
     }
@@ -724,7 +727,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample17.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample18.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
