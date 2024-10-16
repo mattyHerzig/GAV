@@ -114,7 +114,7 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
         _type = get_type(name, value, depth)
         match _type:
             case 'array':
-                # TODO: refer to inferred type with ID? weird edge case, but what if a heap was an element of an array, and changed indices?
+                # TODO: refer to inferred type with ID if data structure? weird edge case, but what if a heap was an element of an array, and changed indices?
                 return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
             case 'set':
                 return (_type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for k in value])

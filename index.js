@@ -159,7 +159,7 @@ function drawOverflowableText(group, x, y, width, height, color = false, center 
 
 const dataStructureTypes = new Set([ // TODO: uncomment when implemented
     'array',
-    // 'set',
+    'set',
     // 'map',
     'queue'
 ]);
@@ -219,12 +219,26 @@ function drawDataStructure(_function, depth, name, type, value) {
             }
             break;
         }
-        case 'set': 
+        case 'set': {
+            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            for (let [index, [elementType, elementValue]] of value.entries()) {
+                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
+                const elementX = x + indent; // px
+                nameForeignObject.attr("width", ELEMENT_WIDTH + indent - 4);
+                if (dataStructureTypes.has(elementType)) {
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
+                    elementDataStructuresToDraw.push([index, elementType, elementValue]);
+                } else { // Primitive type
+                    elementValue = formatValue(elementType, elementValue);
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, elementValue);
+                }
+            }
+            break;
+        }
+        case 'map': {
 
             break;
-        case 'map': 
-
-            break;
+        }
     }
 
     for (let [index, elementType, elementValue] of elementDataStructuresToDraw) {
@@ -572,6 +586,7 @@ function unhighlightAllSteps() {
 // TODO: would be more robust and elegant to use a recursive function to format each variable e.g. consider nested arrays, maps, and sets
 // TODO: handles e.g. hash map with tuples as keys, which is allowed in Python but not in JavaScript?
 // TODO: Infinity -> eg ∞ / \u221E
+// TODO: true -> True, or nah? 
 function formatValue(type, value, isDataStructureElement = false) {
     switch (type) {
         case 'array':
@@ -709,7 +724,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample16.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample17.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
