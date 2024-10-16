@@ -167,7 +167,7 @@ const dataStructureTypes = new Set([ // TODO: uncomment when implemented
 const ELEMENT_WIDTH = 50; // px
 const ELEMENT_HEIGHT = ELEMENT_WIDTH; // px
 const ELEMENT_GAP = 10; // px
-const ELEMENT_TOP_MARGIN = 120; // px
+const ELEMENT_TOP_MARGIN = 80; // px
 const DATA_STRUCTURE_GAP = 20; // px
 
 function drawDataStructure(_function, depth, name, type, value) {
@@ -181,14 +181,17 @@ function drawDataStructure(_function, depth, name, type, value) {
     const elementDataStructuresToDraw = [];
     
     switch (type) {
-        case 'queue': // same as array
-        case 'array':
+        case 'queue': { // same as array
             const { foreignObject: nameForeignObject } = drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
             for (let [index, [elementType, elementValue]] of value.entries()) {
                 const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
                 const elementX = x + indent; // px
                 nameForeignObject.attr("width", ELEMENT_WIDTH + indent - 4);
-                drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1em", false, true, `[${index}]`);
+                if (index === 0) {
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "left");
+                } else if (index === value.length - 1) {
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "right");
+                }
                 if (dataStructureTypes.has(elementType)) {
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
                     elementDataStructuresToDraw.push([index, elementType, elementValue]);
@@ -198,6 +201,24 @@ function drawDataStructure(_function, depth, name, type, value) {
                 }
             }
             break;
+        }
+        case 'array': {
+            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            for (let [index, [elementType, elementValue]] of value.entries()) {
+                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
+                const elementX = x + indent; // px
+                nameForeignObject.attr("width", ELEMENT_WIDTH + indent - 4);
+                drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, `[${index}]`);
+                if (dataStructureTypes.has(elementType)) {
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
+                    elementDataStructuresToDraw.push([index, elementType, elementValue]);
+                } else { // Primitive type
+                    elementValue = formatValue(elementType, elementValue);
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, elementValue);
+                }
+            }
+            break;
+        }
         case 'set': 
 
             break;
@@ -688,7 +709,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample15.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample16.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
