@@ -35,6 +35,7 @@ python_type_to_type = { # type(value).__name__ : type
     'tuple': 'array', # or keep as tuple and use paranthesis where needed?
     'dict': 'map',
     'str': 'string',
+    'deque': 'queue' 
 }
 
 # alternatively, types to include
@@ -42,6 +43,7 @@ python_type_to_type = { # type(value).__name__ : type
 types_to_exclude = { # type(value).__name__
     'function',
     'module',
+    'type' # e.g. `deque` from `from collections import deque`
 }
 
 inferred_type = {} # {(name, depth) : type} # (type e.g. heap, graph representations, etc.) # depth or (function, depth) / f'{function} {depth}'?
@@ -109,17 +111,19 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
                 if not value_id in data_structure_cell_id_to_names_and_depths:
                     data_structure_cell_id_to_names_and_depths[value_id] = []
                 data_structure_cell_id_to_names_and_depths[value_id].append((name, depth))
-        type = get_type(name, value, depth)
-        match type:
+        _type = get_type(name, value, depth)
+        match _type:
             case 'array':
-                return (type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
+                return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
             case 'set':
-                return (type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for k in value])
+                return (_type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for k in value])
             case 'map': # TODO: other stuff e.g. replace tuple paranthesis, when used as key, with square brackets?
-                return (type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function), \
+                return (_type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function), \
                                  get_type_and_value(f'{name}[{f'"{k}"' if get_type(f'{name} key', k, depth) == 'string' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function)) for k, v in value.items()])
+            case 'queue':
+                return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
             case _:
-                return (type, value) # deepcopy(value) if needed
+                return (_type, value) # deepcopy(value) if needed
 
 # class TracingError(Exception):
 #     def __init__(self, message):

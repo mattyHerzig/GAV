@@ -117,8 +117,9 @@ svg.call(d3.zoom()
 // const rightPercentage = 5 + (lastBox.empty() ? 0 : ((lastBox.node().getBBox().x + lastBox.node().getBBox().width) / primitives.node().getBBox().width * 100));
 
 function drawOverflowableText(group, x, y, width, height, color = false, center = false, text = "") {
+    let box;
     if (color) {
-        const box = group.append("rect")
+        box = group.append("rect")
             .attr("x", x)
             .attr("y", y)
             .attr("width", width)
@@ -149,36 +150,48 @@ function drawOverflowableText(group, x, y, width, height, color = false, center 
         div.text(text);
     }
     
-    return div;
+    return {
+        box,
+        foreignObject,
+        div
+    };
 }
 
 const dataStructureTypes = new Set([ // TODO: uncomment when implemented
     'array',
     // 'set',
-    // 'map'
+    // 'map',
+    'queue'
 ]);
 
 const ELEMENT_WIDTH = 50; // px
 const ELEMENT_HEIGHT = ELEMENT_WIDTH; // px
 const ELEMENT_GAP = 10; // px
-const ELEMENT_TOP_MARGIN = 50; // px
+const ELEMENT_TOP_MARGIN = 120; // px
+const DATA_STRUCTURE_GAP = 20; // px
 
 function drawDataStructure(_function, depth, name, type, value) {
     // TODO: implement special visualization for data structures
     // TODO: do cellVarToNameTd esque logic here (have more robust typing e.g. free data structure vs. free primitive?)
     const lastBoundary = dataStructures.select(".data-structure-boundary:last-of-type");
-    const x = ELEMENT_GAP + (lastBoundary.empty() ? 0 : lastBoundary.node().getBBox().x + lastBoundary.node().getBBox().width);
+    const x = DATA_STRUCTURE_GAP + (lastBoundary.empty() ? 0 : lastBoundary.node().getBBox().x + lastBoundary.node().getBBox().width);
     const group = dataStructures.append("g")
         .attr("class", "data-structure-boundary");
     
+    const elementDataStructuresToDraw = [];
+    
     switch (type) {
+        case 'queue': // same as array
         case 'array':
-            drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
             for (let [index, [elementType, elementValue]] of value.entries()) {
-                const elementX = x + (index * (ELEMENT_WIDTH + ELEMENT_GAP)); // px
+                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
+                const elementX = x + indent; // px
+                nameForeignObject.attr("width", ELEMENT_WIDTH + indent - 4);
                 drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1em", false, true, `[${index}]`);
                 if (dataStructureTypes.has(elementType)) {
-                    drawDataStructure(_function, depth, `${name}[${index}]`, elementType, elementValue);
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
+                    elementDataStructuresToDraw.push([index, elementType, elementValue]);
                 } else { // Primitive type
                     elementValue = formatValue(elementType, elementValue);
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, elementValue);
@@ -191,6 +204,10 @@ function drawDataStructure(_function, depth, name, type, value) {
         case 'map': 
 
             break;
+    }
+
+    for (let [index, elementType, elementValue] of elementDataStructuresToDraw) {
+        drawDataStructure(_function, depth, `${name}[${index}]`, elementType, elementValue); 
     }
 }
 
@@ -271,38 +288,36 @@ function drawCallStackFrame(_function, depth, callStackFrame, cellVars, cellVarT
     
     // Append rows to the table for each name and value pair
     for (let [name, [type, value]] of callStackFrame) {
+        const row = table.append("tr");
+
+        // Append name cell (right-aligned)
+        const nameTd = row.append("td")
+            .style("text-align", "right")
+            .style("padding-right", "8px")
+            .text(name);
+        
+        const valueTd = row.append("td")
+            
+        const valueSpan = valueTd.append("span")
+            .style("padding-inline", "2px")
+            .style("border-left", "1px solid gray")
+            .style("border-bottom", "1px solid gray");
+        
+            // Append value cell (left-aligned)
         if (dataStructureTypes.has(type)) {
             drawDataStructure(_function, depth, name, type, value);
-        } else { // Primitive type
-            const row = table.append("tr");
-    
-            // Append name cell (right-aligned)
-            const nameTd = row.append("td")
-                .style("text-align", "right")
-                .style("padding-right", "8px")
-                .text(name);
-            
-            const valueTd = row.append("td")
-                
-            const valueSpan = valueTd.append("span")
-                .style("padding-inline", "2px")
-                .style("border-left", "1px solid gray")
-                .style("border-bottom", "1px solid gray");
-            
-                // Append value cell (left-aligned)
-            if (type === 'free')  {
-                const cellVarNameTd = cellVarToNameTd.get(value);
-                if (cellVarNameTd) {
-                    // TODO: draw arrow from cellVarNameTd to nameTd
-                }
-            } else {
-                value = formatValue(type, value);
-                valueSpan
-                    .style("text-align", "left")
-                    .text(value);
-                if (cellVars.has(`${depth} ${name}`)) {
-                    cellVarToNameTd.set(`${depth} ${name}`, nameTd);
-                }
+        } else if (type === 'free')  {
+            const cellVarNameTd = cellVarToNameTd.get(value);
+            if (cellVarNameTd) {
+                // TODO: draw arrow from cellVarNameTd to nameTd
+            }
+        } else {
+            value = formatValue(type, value);
+            valueSpan
+                .style("text-align", "left")
+                .text(value);
+            if (cellVars.has(`${depth} ${name}`)) {
+                cellVarToNameTd.set(`${depth} ${name}`, nameTd);
             }
         }
     }
@@ -673,7 +688,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample14.py').then(response => response.text()).then((text) => {
+fetch('./samples/sample15.py').then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
