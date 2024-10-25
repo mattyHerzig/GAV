@@ -238,7 +238,8 @@ function drawDataStructure(_function, depth, name, type, value) {
                 const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
                 const elementX = x + indent; // px
                 nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
-                if (dataStructureTypes.has(keyType)) {
+                const keyIsDataStructure = dataStructureTypes.has(keyType);
+                if (keyIsDataStructure) {
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "[ ]");
                     elementDataStructuresToDraw.push([`${name} key`, keyType, keyValue]);
                 } else { // Primitive type
@@ -246,6 +247,7 @@ function drawDataStructure(_function, depth, name, type, value) {
                 }
                 if (dataStructureTypes.has(valueType)) {
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
+                    // TODO: visualize differently if keyIsDataStructure?
                     elementDataStructuresToDraw.push([`${name}[${formatValue(keyType, keyValue)}]`, valueType, valueValue]);
                 } else { // Primitive type
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(valueType, valueValue));
