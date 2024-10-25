@@ -160,14 +160,14 @@ function drawOverflowableText(group, x, y, width, height, color = false, center 
 const dataStructureTypes = new Set([ // TODO: uncomment when implemented
     'array',
     'set',
-    // 'map',
+    'map',
     'queue'
 ]);
 
 const ELEMENT_WIDTH = 50; // px
 const ELEMENT_HEIGHT = ELEMENT_WIDTH; // px
 const ELEMENT_GAP = 10; // px
-const ELEMENT_TOP_MARGIN = 80; // px
+const ELEMENT_TOP_MARGIN = 80; // px // TODO: make this a percentage? And Element Height (and Width)?
 const DATA_STRUCTURE_GAP = 20; // px
 
 function drawDataStructure(_function, depth, name, type, value) {
@@ -182,67 +182,81 @@ function drawDataStructure(_function, depth, name, type, value) {
     
     switch (type) {
         case 'queue': { // same as array
-            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
             for (let [index, [elementType, elementValue]] of value.entries()) {
                 const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
                 const elementX = x + indent; // px
-                nameForeignObject.attr("width", ELEMENT_WIDTH + indent - 4);
+                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
                 if (index === 0) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "left");
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "front"); // or "left"
                 } else if (index === value.length - 1) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "right");
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "back"); // or "right"
                 }
                 if (dataStructureTypes.has(elementType)) {
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
-                    elementDataStructuresToDraw.push([index, elementType, elementValue]);
+                    elementDataStructuresToDraw.push([`${name}[${index}]`, elementType, elementValue]);
                 } else { // Primitive type
-                    elementValue = formatValue(elementType, elementValue);
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, elementValue);
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(elementType, elementValue));
                 }
             }
             break;
         }
         case 'array': {
-            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
             for (let [index, [elementType, elementValue]] of value.entries()) {
                 const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
                 const elementX = x + indent; // px
-                nameForeignObject.attr("width", ELEMENT_WIDTH + indent - 4);
+                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
                 drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, `[${index}]`);
                 if (dataStructureTypes.has(elementType)) {
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
-                    elementDataStructuresToDraw.push([index, elementType, elementValue]);
+                    elementDataStructuresToDraw.push([`${name}[${index}]`, elementType, elementValue]);
                 } else { // Primitive type
-                    elementValue = formatValue(elementType, elementValue);
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, elementValue);
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(elementType, elementValue));
                 }
             }
             break;
         }
         case 'set': {
-            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x + 4, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
             for (let [index, [elementType, elementValue]] of value.entries()) {
                 const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
                 const elementX = x + indent; // px
-                nameForeignObject.attr("width", ELEMENT_WIDTH + indent - 4);
+                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
                 if (dataStructureTypes.has(elementType)) {
                     drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
-                    elementDataStructuresToDraw.push([index, elementType, elementValue]);
+                    elementDataStructuresToDraw.push([`${name} element`, elementType, elementValue]);
                 } else { // Primitive type
-                    elementValue = formatValue(elementType, elementValue);
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, elementValue);
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(elementType, elementValue));
                 }
             }
             break;
         }
         case 'map': {
-
+            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+            for (let [index, [[keyType, keyValue], [valueType, valueValue]]] of value.entries()) {
+                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
+                const elementX = x + indent; // px
+                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
+                if (dataStructureTypes.has(keyType)) {
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "[ ]");
+                    elementDataStructuresToDraw.push([`${name} key`, keyType, keyValue]);
+                } else { // Primitive type
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, `[${formatValue(keyType, keyValue)}]`);
+                }
+                if (dataStructureTypes.has(valueType)) {
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
+                    elementDataStructuresToDraw.push([`${name}[${formatValue(keyType, keyValue)}]`, valueType, valueValue]);
+                } else { // Primitive type
+                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(valueType, valueValue));
+                }
+            }
             break;
         }
     }
 
-    for (let [index, elementType, elementValue] of elementDataStructuresToDraw) {
-        drawDataStructure(_function, depth, `${name}[${index}]`, elementType, elementValue); 
+    for (let [elementName, elementType, elementValue] of elementDataStructuresToDraw) {
+        drawDataStructure(_function, depth, elementName, elementType, elementValue); 
     }
 }
 
