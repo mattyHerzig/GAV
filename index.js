@@ -3,7 +3,7 @@
 import { createHighlighter } from 'https://esm.sh/shiki'
 import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
-
+const sampleNumber = 12;
 
 
 
@@ -116,6 +116,21 @@ svg.call(d3.zoom()
 // console.log('primitives.node().getBBox().width', primitives.node().getBBox().width);
 // const rightPercentage = 5 + (lastBox.empty() ? 0 : ((lastBox.node().getBBox().x + lastBox.node().getBBox().width) / primitives.node().getBBox().width * 100));
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function drawOverflowableText(group, x, y, width, height, color = false, center = false, text = "") {
     let box;
     if (color) {
@@ -159,9 +174,9 @@ function drawOverflowableText(group, x, y, width, height, color = false, center 
 
 const dataStructureTypes = new Set([ // TODO: uncomment when implemented
     'array',
+    'queue',
     'set',
     'map',
-    'queue'
 ]);
 
 const ELEMENT_WIDTH = 50; // px
@@ -170,92 +185,122 @@ const ELEMENT_GAP = 10; // px
 const ELEMENT_TOP_MARGIN = 80; // px // TODO: make this a percentage? And Element Height (and Width)?
 const DATA_STRUCTURE_GAP = 20; // px
 
+function getElementName(type, name, index, keyType, keyValue) {
+    switch (type) {
+        case 'array':
+        case 'queue':
+            return `${name}[${index}]`;
+        case 'set':
+            return `${name} element`;
+        case 'map':
+            return `${name}[${(dataStructureTypes.has(keyType) || keyType === 'free') ? " " : formatValue(keyType, keyValue)}]`;
+    }
+}
+
+function checkElement(elementDataStructuresToDraw, name, type, index, elementType, elementValue, keyType, keyValue) {
+    if (keyType !== undefined) {
+        if (keyType !== 'free') {
+            if (dataStructureTypes.has(keyType)) {
+                elementDataStructuresToDraw.push([`${name} key`, keyType, keyValue]);
+            }
+        }   
+    }
+    let isDataStructure = true;
+    if (elementType !== 'free') {
+        if (dataStructureTypes.has(elementType)) {
+            let elementName = getElementName(type, name, index, keyType, keyValue);
+            elementDataStructuresToDraw.push([elementName, elementType, elementValue]);
+        } else {
+            isDataStructure = false;
+        }
+    }
+    return isDataStructure;
+}
+
+function getElementIndex(type, index, valueLength, keyType, keyValue) {
+    switch (type) {
+        case 'array':
+            return `[${index}]`;
+        case 'queue':
+            if (index === 0) return "front"; // or "left"
+            if (index === valueLength - 1) return "back"; // or "right"
+            return undefined;
+        case 'set':
+            return undefined;
+        case 'map':
+            return (keyType === 'free' || dataStructureTypes.has(keyType)) ?
+                '[ ]' : `[${formatValue(keyType, keyValue)}]`;
+    }
+}
+
+function drawDataStructureOverflowableText(index, x, nameForeignObject, type, group, valueLength, elementType, elementValue, keyType, keyValue) {
+    const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
+    const elementX = x + indent; // px
+    nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
+    let elementIndex = getElementIndex(type, index, valueLength, keyType, keyValue);
+    if (elementIndex !== undefined) {
+        drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, elementIndex);
+    }
+    if (elementType !== 'free') {
+        if (dataStructureTypes.has(elementType)) {
+            drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
+        } else {
+            drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(elementType, elementValue));
+        }
+    }
+}
+
 function drawDataStructure(_function, depth, name, type, value) {
     // TODO: implement special visualization for data structures
     // TODO: do cellVarToNameTd esque logic here (have more robust typing e.g. free data structure vs. free primitive?)
     const lastBoundary = dataStructures.select(".data-structure-boundary:last-of-type");
     const x = DATA_STRUCTURE_GAP + (lastBoundary.empty() ? 0 : lastBoundary.node().getBBox().x + lastBoundary.node().getBBox().width);
-    const group = dataStructures.append("g")
-        .attr("class", "data-structure-boundary");
     
     const elementDataStructuresToDraw = [];
-    
-    switch (type) {
-        case 'queue': { // same as array
-            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
-            for (let [index, [elementType, elementValue]] of value.entries()) {
-                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
-                const elementX = x + indent; // px
-                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
-                if (index === 0) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "front"); // or "left"
-                } else if (index === value.length - 1) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "back"); // or "right"
+    let allChildrenAreDataStructures;
+    if (value.length === 0) {
+        allChildrenAreDataStructures = false;
+    } else {
+        allChildrenAreDataStructures = true;
+        switch (type) {
+            case 'array':
+            case 'queue':
+            case 'set':
+                for (let [index, [elementType, elementValue]] of value.entries()) {
+                    allChildrenAreDataStructures = checkElement(elementDataStructuresToDraw, name, type, index, elementType, elementValue) && allChildrenAreDataStructures;
                 }
-                if (dataStructureTypes.has(elementType)) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
-                    elementDataStructuresToDraw.push([`${name}[${index}]`, elementType, elementValue]);
-                } else { // Primitive type
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(elementType, elementValue));
+                break;
+            case 'map':
+                for (let [index, [[keyType, keyValue], [valueType, valueValue]]] of value.entries()) {
+                    allChildrenAreDataStructures = checkElement(elementDataStructuresToDraw, name, type, index, valueType, valueValue, keyType, keyValue) && allChildrenAreDataStructures;
                 }
-            }
-            break;
-        }
-        case 'array': {
-            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
-            for (let [index, [elementType, elementValue]] of value.entries()) {
-                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
-                const elementX = x + indent; // px
-                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
-                drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, `[${index}]`);
-                if (dataStructureTypes.has(elementType)) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
-                    elementDataStructuresToDraw.push([`${name}[${index}]`, elementType, elementValue]);
-                } else { // Primitive type
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(elementType, elementValue));
-                }
-            }
-            break;
-        }
-        case 'set': {
-            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
-            for (let [index, [elementType, elementValue]] of value.entries()) {
-                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
-                const elementX = x + indent; // px
-                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
-                if (dataStructureTypes.has(elementType)) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
-                    elementDataStructuresToDraw.push([`${name} element`, elementType, elementValue]);
-                } else { // Primitive type
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(elementType, elementValue));
-                }
-            }
-            break;
-        }
-        case 'map': {
-            const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
-            for (let [index, [[keyType, keyValue], [valueType, valueValue]]] of value.entries()) {
-                const indent = (index * (ELEMENT_WIDTH + ELEMENT_GAP));
-                const elementX = x + indent; // px
-                nameForeignObject.attr("width", ELEMENT_WIDTH + indent);
-                const keyIsDataStructure = dataStructureTypes.has(keyType);
-                if (keyIsDataStructure) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, "[ ]");
-                    elementDataStructuresToDraw.push([`${name} key`, keyType, keyValue]);
-                } else { // Primitive type
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN + ELEMENT_HEIGHT + 4, ELEMENT_WIDTH, "1.1em", false, true, `[${formatValue(keyType, keyValue)}]`);
-                }
-                if (dataStructureTypes.has(valueType)) {
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true);
-                    // TODO: visualize differently if keyIsDataStructure?
-                    elementDataStructuresToDraw.push([`${name}[${formatValue(keyType, keyValue)}]`, valueType, valueValue]);
-                } else { // Primitive type
-                    drawOverflowableText(group, elementX, ELEMENT_TOP_MARGIN, ELEMENT_WIDTH, ELEMENT_HEIGHT, true, true, formatValue(valueType, valueValue));
-                }
-            }
-            break;
+                break;
         }
     }
+
+    if (!allChildrenAreDataStructures) {
+        const group = dataStructures.append("g")
+            .attr("class", "data-structure-boundary");
+        const { foreignObject: nameForeignObject } = drawOverflowableText(group, x, ELEMENT_TOP_MARGIN - 20, ELEMENT_WIDTH, "2em", false, false, name);
+        switch (type) {
+            case 'array':
+            case 'queue':
+            case 'set': {
+                for (let [index, [elementType, elementValue]] of value.entries()) {
+                    drawDataStructureOverflowableText(index, x, nameForeignObject, type, group, value.length, elementType, elementValue);
+                }
+                break;
+            }
+            case 'map': {
+                for (let [index, [[keyType, keyValue], [valueType, valueValue]]] of value.entries()) {
+                    drawDataStructureOverflowableText(index, x, nameForeignObject, type, group, value.length, valueType, valueValue, keyType, keyValue);
+                }
+                break;
+            }
+        }
+    }
+    
+    // console.log("elementDataStructuresToDraw", elementDataStructuresToDraw); // DEBUG
 
     for (let [elementName, elementType, elementValue] of elementDataStructuresToDraw) {
         drawDataStructure(_function, depth, elementName, elementType, elementValue); 
@@ -622,6 +667,8 @@ function formatValue(type, value, isDataStructureElement = false) {
             return value.toString();
         case 'null':
             return 'null';
+        case 'tuple':
+            return `(${value.map(([t, v]) => formatValue(t, v, true)).join(', ')})`;
         default:
             return value.toString();
     }
@@ -743,7 +790,7 @@ let pyodidePromise = new Promise((resolve) => {
     resolvePyodidePromise = resolve;
 });
 
-fetch('./samples/sample18.py').then(response => response.text()).then((text) => {
+fetch(`./samples/sample${sampleNumber}.py`).then(response => response.text()).then((text) => {
     sampleCode = text;
     resolveSampleCodePromise();
 });
@@ -902,6 +949,7 @@ async function build() {
         terminal.appendChild(terminalError);
         return false;
     } finally {
+        // TODO: consider clearing collections here, to save memory
         // await pyodide.runPythonAsync('clear_collections()'); // alternatively, can look into restarting pyodide completely e.g. https://github.com/pyodide/pyodide/issues/703
     }
     steps = pyodide.globals.get('steps').toJs();

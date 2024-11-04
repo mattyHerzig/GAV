@@ -32,12 +32,11 @@ import traceback
 # TODO: strings are data structures, not primitive. map string to array?
 python_type_to_type = { # type(value).__name__ : type
     'list': 'array',
-    'tuple': 'array', # or keep as tuple and use paranthesis where needed?
     'dict': 'map',
     'str': 'string',
     'deque': 'queue',
-
     'NoneType': 'null', # TODO: ?
+    # 'tuple': 'array', # actually, I'm keeping tuple as a primitive?
 }
 
 # alternatively, types to include
@@ -58,7 +57,8 @@ primitive_types = {
     'int',
     'float',
     'str',
-    'bool'
+    'bool',
+    'tuple'
 }
 
 # 'string'?
@@ -115,7 +115,7 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
                 data_structure_cell_id_to_names_and_depths[value_id].append((name, depth))
         _type = get_type(name, value, depth)
         match _type:
-            case 'array':
+            case 'array' | 'queue' | 'tuple':
                 # TODO: refer to inferred type with ID if data structure? weird edge case, but what if a heap was an element of an array, and changed indices?
                 return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
             case 'set':
@@ -123,8 +123,6 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
             case 'map': # TODO: other stuff e.g. replace tuple paranthesis, when used as key, with square brackets?
                 return (_type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function), \
                                  get_type_and_value(f'{name}[{f'"{k}"' if get_type(f'{name} key', k, depth) == 'string' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function)) for k, v in value.items()])
-            case 'queue':
-                return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
             case _:
                 return (_type, value) # deepcopy(value) if needed
 
