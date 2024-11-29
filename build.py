@@ -53,6 +53,12 @@ steps = [(1, [], [], '')] # [(lineno, call_stack, node_types, stdout)] # 1-index
 
 lineno_to_steps = {} # {lineno : [step]}
 
+# can alternately only change to 'global' in the frontend and have an empty string
+# can contain lineno if needed
+# scope = '::'.join(call_stack[d][0] for d in range(1, len(call_stack)))
+# scoped_name = f"{scope}::{name}" if scope else name
+data_structure_id_to_scoped_name_and_base_type = {} # {id(value) : (get_type(name, value, depth), scoped_name)}
+
 primitive_types = {
     'int',
     'float',
@@ -67,6 +73,12 @@ data_structure_types = {
     'set',
     'map'
 }
+
+data_structure_specialized_types = {
+    'array', # e.g. "stack", "heap", "2d array"
+    'map' # e.g. "graph (adjacency list)"
+}
+# assert(data_structure_specialized_types <= data_structure_types)
 
 def is_primitive(value):
     return type(value).__name__ in primitive_types
@@ -90,14 +102,14 @@ def get_type(name, value, depth):
 # can simplify the arguments by using global variables and clear them on each tracefunc 
 #   or, by making it a nested function of tracefunc?
 #   don't need to check if primitive free var, if a data structure element?
-def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function):
+def get_type_and_value(name, value, depth, cellvars, freevars, cell_primitive_name_to_depths, cell_data_structure_id_to_names_and_depths, call_stack, function):
     # print('name', name, 'value', value, 'depth', depth, file=sys.__stdout__) # DEBUG
-    if is_freevar(name, value, freevars, data_structure_cell_id_to_names_and_depths):
+    if is_freevar(name, value, freevars, cell_data_structure_id_to_names_and_depths):
         if is_primitive(value):
             cell_name = name
-            cell_depth = primitive_cell_name_to_depths[name][-1]
+            cell_depth = cell_primitive_name_to_depths[name][-1]
         else: # data structure
-            cell_name, cell_depth = data_structure_cell_id_to_names_and_depths[id(value)][-1]
+            cell_name, cell_depth = cell_data_structure_id_to_names_and_depths[id(value)][-1]
         # print('call_stack', call_stack, 'cell_depth', cell_depth, file=sys.__stdout__)
         # TODO: this assumes _locals is first going to iterate over more "authentic" value (e.g. data structure element before iterated element in same scope), which may be unintuitive?
         #    actually okay, since locals seems to be in order of initialization?
@@ -105,24 +117,24 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
     else: # not freevar
         if is_cellvar(name, value, cellvars):
             if is_primitive(value):
-                if not name in primitive_cell_name_to_depths:
-                    primitive_cell_name_to_depths[name] = []
-                primitive_cell_name_to_depths[name].append(depth)
+                if not name in cell_primitive_name_to_depths:
+                    cell_primitive_name_to_depths[name] = []
+                cell_primitive_name_to_depths[name].append(depth)
             else: # data structure
                 value_id = id(value)
-                if not value_id in data_structure_cell_id_to_names_and_depths:
-                    data_structure_cell_id_to_names_and_depths[value_id] = []
-                data_structure_cell_id_to_names_and_depths[value_id].append((name, depth))
+                if not value_id in cell_data_structure_id_to_names_and_depths:
+                    cell_data_structure_id_to_names_and_depths[value_id] = []
+                cell_data_structure_id_to_names_and_depths[value_id].append((name, depth))
         _type = get_type(name, value, depth)
         match _type:
             case 'array' | 'queue' | 'tuple':
                 # TODO: refer to inferred type with ID if data structure? weird edge case, but what if a heap was an element of an array, and changed indices?
-                return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
+                return (_type, [get_type_and_value(f'{name}[{i}]', v, depth, cellvars, freevars, cell_primitive_name_to_depths, cell_data_structure_id_to_names_and_depths, call_stack, function) for i, v in enumerate(value)])
             case 'set':
-                return (_type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function) for k in value])
+                return (_type, [get_type_and_value(f'{name} element', k, depth, cellvars, freevars, cell_primitive_name_to_depths, cell_data_structure_id_to_names_and_depths, call_stack, function) for k in value])
             case 'map': # TODO: other stuff e.g. replace tuple paranthesis, when used as key, with square brackets?
-                return (_type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function), \
-                                 get_type_and_value(f'{name}[{f'"{k}"' if get_type(f'{name} key', k, depth) == 'string' else k}]', v, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function)) for k, v in value.items()])
+                return (_type, [(get_type_and_value(f'{name} key', k, depth, cellvars, freevars, cell_primitive_name_to_depths, cell_data_structure_id_to_names_and_depths, call_stack, function), \
+                                 get_type_and_value(f'{name}[{f'"{k}"' if get_type(f'{name} key', k, depth) == 'string' else k}]', v, depth, cellvars, freevars, cell_primitive_name_to_depths, cell_data_structure_id_to_names_and_depths, call_stack, function)) for k, v in value.items()])
             case _:
                 return (_type, value) # deepcopy(value) if needed
 
@@ -134,6 +146,7 @@ def get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_na
 def tracefunc(frame, event, arg):
     if frame.f_code.co_filename != '<string>': # prevents tracing other files e.g. imported modules
         return tracefunc
+    lineno = frame.f_lineno
     frames = [] # [height : (function, {name : value}, varnames, cellvars, freevars)]
     current_frame = frame
     while current_frame:
@@ -148,26 +161,32 @@ def tracefunc(frame, event, arg):
             break
         current_frame = current_frame.f_back
         
-    primitive_cell_name_to_depths = {} # {name : depth}
-    data_structure_cell_id_to_names_and_depths = {} # {id(value) : (name, depth)}
+    cell_primitive_name_to_depths = {} # {name : depth}
+    cell_data_structure_id_to_names_and_depths = {} # {id(value) : (name, depth)}
     # if needed for optimization, can go back to manually handling the call stack, and only check current frame's locals and cell variables
     call_stack = [] # [depth : (function, {name : (type, value)})] # global is 0
+    scope = ''
     # can add varnames if using
     for depth, (function, locals, cellvars, freevars) in enumerate(reversed(frames)): # TODO: function -> scope?
+        if depth > 0:
+            scope = f'{scope}::{function}' if scope else function
         _locals = {}
         for name, value in locals.items():
-            _locals[name] = get_type_and_value(name, value, depth, cellvars, freevars, primitive_cell_name_to_depths, data_structure_cell_id_to_names_and_depths, call_stack, function)
+            _locals[name] = get_type_and_value(name, value, depth, cellvars, freevars, cell_primitive_name_to_depths, cell_data_structure_id_to_names_and_depths, call_stack, function)
+            if _locals[name][0] in data_structure_specialized_types and id(value) not in data_structure_id_to_scoped_name_and_base_type:
+                scoped_name = f"{scope}::{name}" if scope else name
+                data_structure_id_to_scoped_name_and_base_type[id(value)] = (scoped_name, _locals[name][0])
         call_stack.append((function, _locals))
-    cell_vars = {f'{cell_depth} {cell_name}' for cell_name, cell_depths in primitive_cell_name_to_depths.items() for cell_depth in cell_depths} | \
-                {f'{cell_depth} {cell_name}' for cell_names_and_depths in data_structure_cell_id_to_names_and_depths.values() for cell_name, cell_depth in cell_names_and_depths}
-    # node_types = [type(node).__name__ for node in lineno_to_nodes[frame.f_lineno]] if frame.f_lineno in lineno_to_nodes and lineno_to_nodes[frame.f_lineno] else [] # temporarily just using type name for demonstration
+    cell_vars = {f'{cell_depth} {cell_name}' for cell_name, cell_depths in cell_primitive_name_to_depths.items() for cell_depth in cell_depths} | \
+                {f'{cell_depth} {cell_name}' for cell_names_and_depths in cell_data_structure_id_to_names_and_depths.values() for cell_name, cell_depth in cell_names_and_depths}
+    # node_types = [type(node).__name__ for node in lineno_to_nodes[lineno]] if lineno in lineno_to_nodes and lineno_to_nodes[lineno] else [] # temporarily just using type name for demonstration
     stdout = sys.stdout.getvalue()
-    # for some reason, if `if frame.f_lineno == 0: return tracefunc` is included at the beginning, some early steps are skipped? also handle lines being called twice? Eg with different events # not (1 <= frame.f_lineno <= len(lines) + 1)
-    if frame.f_lineno != 0: 
-        steps.append((frame.f_lineno, call_stack, cell_vars, stdout)) 
-        if frame.f_lineno not in lineno_to_steps:
-            lineno_to_steps[frame.f_lineno] = []
-        lineno_to_steps[frame.f_lineno].append(len(steps) - 1)
+    # for some reason, if `if lineno == 0: return tracefunc` is included at the beginning, some early steps are skipped? also handle lines being called twice? Eg with different events # not (1 <= lineno <= len(lines) + 1)
+    if lineno != 0: 
+        steps.append((lineno, call_stack, cell_vars, stdout)) 
+        if lineno not in lineno_to_steps:
+            lineno_to_steps[lineno] = []
+        lineno_to_steps[lineno].append(len(steps) - 1)
     return tracefunc
 
 # simplification of the traceback. Can revert to unsimplified and rigorous if needed
@@ -201,6 +220,10 @@ except Exception as e:
 finally:
     sys.settrace(None)
     sys.stdout = sys.__stdout__
+
+# can sort based on lineno if it'd improve understanding
+data_structure_scoped_names_and_base_types = list(data_structure_id_to_scoped_name_and_base_type.values())
+print('data_structure_scoped_names_and_base_types', data_structure_scoped_names_and_base_types) # DEBUG
 
 # def clear_collections(): # can clear in JavaScript after getting deliverables, e.g. steps, lineno_to_steps, etc., to save memory (unless it uses the same memory)
 #     for collection in [lineno_to_nodes, lineno_to_comment, inferred_type, steps, lineno_to_steps]:

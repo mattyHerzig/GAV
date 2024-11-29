@@ -1,5 +1,7 @@
 // if needed, can use an alternative importing e.g. https://cdn.jsdelivr.net/npm/<name>/+esm, install locally, importmap
 // or, try github.com/zikaari/monaco-editor-textmate instead
+// if needed, can import monaco editor and pyodide from a CDN for consistency
+import * as webllm from "https://esm.sh/@mlc-ai/web-llm";
 import { createHighlighter } from 'https://esm.sh/shiki'
 import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
@@ -99,13 +101,6 @@ svg.call(d3.zoom()
 
 
 
-
-
-
-
-
-
-
 // later if needed, can make position based on percentage for more responsive design
 // console.log('lastBox', lastBox);
 // console.log('lastBox.empty()', lastBox.empty());
@@ -115,19 +110,6 @@ svg.call(d3.zoom()
 // }
 // console.log('primitives.node().getBBox().width', primitives.node().getBBox().width);
 // const rightPercentage = 5 + (lastBox.empty() ? 0 : ((lastBox.node().getBBox().x + lastBox.node().getBBox().width) / primitives.node().getBBox().width * 100));
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -762,7 +744,9 @@ function reset() {
     stepSlider.setAttribute('disabled', '');
     stepSliderLeft.setAttribute('disabled', '');
     stepSliderRight.setAttribute('disabled', '');
-    mouseListener.dispose();
+    if (mouseListener !== undefined) {
+        mouseListener.dispose();
+    }
     unhighlightLines();
     eraseCallStack(); // dataStructures.innerHTML = '';
     terminal.innerText = '';
@@ -811,20 +795,17 @@ await Promise.all([sampleCodePromise, buildCodePromise]); // TODO: distribute wh
 // let lines;
 
 // TODO: make highlighting look more like VS Code's (or even LeetCode's) eg https://github.com/microsoft/monaco-editor/issues/1762
-let resolveEditorLoaded;
+let resolveEditorLoaded, editorLineEditor;
 const editorLoaded = new Promise(resolve => resolveEditorLoaded = resolve);
-let editorLineEditor;
-let editorLoading = document.getElementById('editor-loading');
 require.config({ paths: { vs: 'node_modules/monaco-editor/min/vs' } });
-require(['vs/editor/editor.main'], async () => {
-
+async function loadEditor() {
     const highlighter = await createHighlighter({
         themes: ['dark-plus'],
         langs: ['python']
     })
-    
+
     monaco.languages.register({ id: 'python' })
-    
+
     shikiToMonaco(highlighter, monaco)
 
     // console.time('editor');
@@ -835,7 +816,7 @@ require(['vs/editor/editor.main'], async () => {
         automaticLayout: true,
         minimap: { enabled: false },
         lineNumbers: 'on',
-        stickyScroll: { enabled: false},
+        stickyScroll: { enabled: false },
         scrollbar: { vertical: 'hidden' },
         overviewRulerBorder: false,
         overviewRulerLanes: 0,
@@ -877,7 +858,7 @@ require(['vs/editor/editor.main'], async () => {
         theme: 'dark-plus',
         automaticLayout: true,
         minimap: { enabled: false },
-        stickyScroll: { enabled: false},
+        stickyScroll: { enabled: false },
         scrollbar: { horizontal: 'hidden', vertical: 'hidden' },
         overviewRulerBorder: false,
         overviewRulerLanes: 0,
@@ -889,11 +870,12 @@ require(['vs/editor/editor.main'], async () => {
         // cursorBlinking: 'hidden', // Hide the cursor
         // renderLineHighlightOnlyWhenFocus: false, // Ensure line highlight is always off
     });
-    editorLoading.remove();
+    document.getElementById('editor-loading').remove();
     resolveEditorLoaded();
-});
+}
+require(['vs/editor/editor.main'], loadEditor);
 
-let steps, linenoToSteps, error, errorLineno;
+let steps, linenoToSteps, error, errorLineno, dataStructureScopedNamesAndBaseTypes;
 
 function formatTraceback(tb) {
     let filteredTbLines = ['Traceback (most recent call last):'];
@@ -927,6 +909,127 @@ function extractErrorLinenoFromError(error) {
     return 0;
 }
 
+const selectedWebLlmModel = "Qwen2.5-Coder-1.5B-Instruct-q4f16_1-MLC";
+let resolveWebLlmLoaded, webLlmEngine;
+const webLlmLoaded = new Promise(resolve => resolveWebLlmLoaded = resolve);
+async function loadWebLlm() {
+    webLlmEngine = await webllm.CreateMLCEngine(selectedWebLlmModel);
+    resolveWebLlmLoaded(webLlmEngine);
+}
+loadWebLlm();
+// update last message content and schema
+const webLlmRequest = {
+    stream: false,
+    temperature: 0.0,
+    messages: [
+        {
+            role: "system",
+            content:
+`Given Python code, return the fitting specialized types of data structures.
+For each data structure, you may consider that:
+- It is one of the graph representations e.g. "adjacency list graph" (especially if graph traversal, e.g. DFS/BFS, is performed on it)
+- The nodes of a graph are represented as distinct strings e.g. "A", "B", "C"`
+        },
+        {
+            role: "user",
+            content:
+                `x = [1, 2.0]
+y = 4
+z = [
+    [1, 2, 3],
+    [4, 5, 6],
+    [7, 8, 9]
+]`,
+        },
+        {
+            role: "assistant",
+            content:
+                `{
+    "x": "array",
+    "z": "2d array",
+}`,
+        },
+        {
+            role: "user",
+            content: undefined
+        }
+    ],
+    response_format: {
+        type: "json_object",
+        schema: undefined
+    }
+};
+const baseTypeToSpecializedTypes = new Map([
+    ["array", ["array", "stack", "heap", "2d array"]],
+    ["map", ["map", "adjacency list graph"]],
+]);
+async function getDataStructureSpecializedTypes() {
+    if (dataStructureScopedNamesAndBaseTypes.length === 0) {
+        return;
+    }
+    webLlmRequest.messages[3].content = editor.getValue(); // can alternatively get code from pyodide
+    const properties = dataStructureScopedNamesAndBaseTypes.map(([scopedName, baseType]) =>
+`        "${scopedName}": { "$ref": "#/$defs/${baseType}Types" }`).join(',\n');
+    const includedBaseTypes = new Set(dataStructureScopedNamesAndBaseTypes.map(([_, baseType]) => baseType));
+    const defs = Array.from(includedBaseTypes).map(baseType => {
+        const specializedTypes = baseTypeToSpecializedTypes.get(baseType) || [baseType];
+        return `        "${baseType}Types": {
+            "title": "Determine specialized type from base type ${baseType}",
+            "type": "string",
+            "enum": ${JSON.stringify(specializedTypes)}
+        }`
+    }).join(',\n'); // add "default": "${baseType}" if wanted
+    webLlmRequest.response_format.schema =
+        `{
+    "type": "object",
+    "properties": {
+${properties}
+    },
+    "required": [${dataStructureScopedNamesAndBaseTypes.map(([scopedName]) =>`"${scopedName}"`).join(', ')}],
+    "additionalProperties": false,
+    "$defs": {
+${defs}
+    }
+}`
+    // console.log('webLlmRequest:', webLlmRequest); // DEBUG
+    const reply = await webLlmEngine.chatCompletion(webLlmRequest);
+    const message = await webLlmEngine.getMessage();
+    // console.log('reply:', reply); // DEBUG
+    // console.log('message:', message); // DEBUG
+}
+
+
+
+function setup() {
+    terminal.innerText = '';
+    setStepSliderMax(steps.length - 1);
+    setStepSliderValue(errorLineno > 0 ? getStepSliderMax() : getStepSliderMin());
+    processStep(getStepSliderValue());
+    stepSlider.removeAttribute('disabled');
+    stepSliderLeft.removeAttribute('disabled');
+    stepSliderRight.removeAttribute('disabled');
+    document.documentElement.style.setProperty('--step-highlight-width', `max(1px, 100% / ${getStepSliderMax() - getStepSliderMin() + 1})`); // TODO: am i tripping, or are these different widths
+    highlightAllLineno('cursor-pointer');
+    mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
+        if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
+            const lineno = e.target.position.lineNumber;
+            // if (!linenoToSteps.has(lineno)) { return; }
+            const _steps = linenoToSteps.get(lineno) || [];
+            // console.log('Line number clicked:', lineno);
+            // console.log('linenoToSteps', linenoToSteps);
+            // console.log('_steps:', _steps);
+            if (!linenoIsHighlighted(lineno, 'lineno-highlight')) { // I'm assuming that lineno and steps are one-to-one, so we don't have to also have a lineno attribute for step-highlights
+                highlightLineno(lineno, 'lineno-highlight');
+                highlightSteps(_steps);
+            } else {
+                unhighlightLineno(lineno, 'lineno-highlight');
+                unhighlightSteps(_steps);
+            }
+        }
+    });
+    setPlayButtonState(playButtonState.Play);
+}
+
 async function build() {
     unhighlightLines();
     terminal.innerText = '';
@@ -956,6 +1059,10 @@ async function build() {
     linenoToSteps = pyodide.globals.get('lineno_to_steps').toJs();
     error = pyodide.globals.get('error');
     errorLineno = pyodide.globals.get('error_lineno');
+    dataStructureScopedNamesAndBaseTypes = pyodide.globals.get('data_structure_scoped_names_and_base_types').toJs();
+
+    // await getDataStructureSpecializedTypes(); // DEBUG
+
     // console.log('steps:', steps); // DEBUG
     // console.log('linenoToSteps:', linenoToSteps); // DEBUG
     // console.log('error:', error); // DEBUG
@@ -963,35 +1070,16 @@ async function build() {
     return true;
 }
 
-function setup() {
-    terminal.innerText = '';
-    setStepSliderMax(steps.length - 1);
-    setStepSliderValue(errorLineno > 0 ? getStepSliderMax() : getStepSliderMin());    
-    processStep(getStepSliderValue());
-    stepSlider.removeAttribute('disabled');
-    stepSliderLeft.removeAttribute('disabled');
-    stepSliderRight.removeAttribute('disabled');
-    document.documentElement.style.setProperty('--step-highlight-width', `max(1px, 100% / ${getStepSliderMax() - getStepSliderMin() + 1})`); // TODO: am i tripping, or are these different widths
-    highlightAllLineno('cursor-pointer');
-    mouseListener = editor.onMouseDown((e) => { // alternatively, onMouseUp
-        if (e.target.type === monaco.editor.MouseTargetType.GUTTER_LINE_NUMBERS) {
-            const lineno = e.target.position.lineNumber;
-            // if (!linenoToSteps.has(lineno)) { return; }
-            const _steps = linenoToSteps.get(lineno) || [];
-            // console.log('Line number clicked:', lineno);
-            // console.log('linenoToSteps', linenoToSteps);
-            // console.log('_steps:', _steps);
-            if (!linenoIsHighlighted(lineno, 'lineno-highlight')) { // I'm assuming that lineno and steps are one-to-one, so we don't have to also have a lineno attribute for step-highlights
-                highlightLineno(lineno, 'lineno-highlight');
-                highlightSteps(_steps);
-            } else {
-                unhighlightLineno(lineno, 'lineno-highlight');
-                unhighlightSteps(_steps);
-            }
-        }
-    });
-    setPlayButtonState(playButtonState.Play);
-}
+
+
+
+
+
+
+
+
+
+
 
 // function unmirrorPreviousLine() {
 //     const appendedLineno = linenos.querySelector(':scope > .appended-lineno:nth-last-child(1)');
@@ -1277,7 +1365,7 @@ playButton.addEventListener('click', async () => {
     switch (getPlayButtonState()) {
         case playButtonState.Build:
             setPlayButtonState(playButtonState.Building);
-            await editorLoaded;
+            await Promise.all([editorLoaded, webLlmLoaded]);
             if (await build()) {
                 setup();
             } else {
