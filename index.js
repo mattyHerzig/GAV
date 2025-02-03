@@ -5,7 +5,7 @@ import * as webllm from "https://esm.sh/@mlc-ai/web-llm";
 import { createHighlighter } from 'https://esm.sh/shiki'
 import { shikiToMonaco } from 'https://esm.sh/@shikijs/monaco'
 
-const sampleNumber = 12;
+const sampleNumber = 21;
 
 
 
@@ -994,8 +994,11 @@ ${defs}
     // console.log('webLlmRequest:', webLlmRequest); // DEBUG
     const reply = await webLlmEngine.chatCompletion(webLlmRequest);
     const message = await webLlmEngine.getMessage();
-    // console.log('reply:', reply); // DEBUG
-    // console.log('message:', message); // DEBUG
+
+
+    
+    console.log('reply:', reply); // DEBUG
+    console.log('message:', message); // DEBUG
 }
 
 
@@ -1061,7 +1064,7 @@ async function build() {
     errorLineno = pyodide.globals.get('error_lineno');
     dataStructureScopedNamesAndBaseTypes = pyodide.globals.get('data_structure_scoped_names_and_base_types').toJs();
 
-    // await getDataStructureSpecializedTypes(); // DEBUG
+    await getDataStructureSpecializedTypes(); // DEBUG
 
     // console.log('steps:', steps); // DEBUG
     // console.log('linenoToSteps:', linenoToSteps); // DEBUG
