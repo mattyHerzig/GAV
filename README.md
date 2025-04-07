@@ -12,7 +12,7 @@
 [![Map Visualization Video](https://img.youtube.com/vi/na4Z-v7j40o/0.jpg)](https://youtu.be/na4Z-v7j40o "General Algorithm Visualizer Map Visualization")
 
 ## Map Visualization
-[![Map Visualization Video](https://img.youtube.com/vi/zf1jaYEeFY8/0.jpg)](https://youtu.be/zf1jaYEeFY8 "General Algorithm Visualizer Map Visualization")
+[![Map Visualization Video](https://img.youtube.com/vi/HeRnCdYRwbw/0.jpg)](https://youtu.be/HeRnCdYRwbw "General Algorithm Visualizer Map Visualization")
 
 ## AI-Assisted Type Classification
 [![AI-Assisted Type Classification Video](https://img.youtube.com/vi/zf1jaYEeFY8/0.jpg)](https://youtu.be/zf1jaYEeFY8 "General Algorithm Visualizer AI-Assisted Type Classification")
